@@ -7,10 +7,11 @@ const protectRoute=(req,res,next)=>{
         if(!token){
             return res.status(401).json({message:'Unauthorized'});
         }
-        const decoded=jwt.verify(token,process.env.JWT_SECRET);
+        const decoded=jwt.verify(token,process.env.JWT_SECRET); 
         if(!decoded){
             return res.status(401).json({message:'Unauthorized'});
         }
+        // console.log(decoded);
         req.userId=decoded.userId;  // we will set this in the req object so that we can use it in the controllers to get the current user
         next();
     } catch (error) {
