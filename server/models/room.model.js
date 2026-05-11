@@ -39,8 +39,16 @@ const roomSchema=new Schema(
                 ref:'Message',
                 default:[]
             }
-        ]
-    }
+        ],
+        isPublic:{
+            type:Boolean,
+            default:false
+        },
+        inviteCode:{
+            type:String,
+            unique:true
+        }
+    },{timestamps:true}
 );
 
 module.exports=mongoose.model('Room',roomSchema);
