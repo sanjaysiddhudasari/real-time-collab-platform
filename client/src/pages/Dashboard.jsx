@@ -158,7 +158,6 @@ export default function Dashboard() {
     return () => {
       socket.off("connect");
       socket.off("disconnect");
-      socket.disconnect();
     };
   }, []);
 
@@ -197,7 +196,6 @@ export default function Dashboard() {
     if (!newRoom.roomname.trim()) return;
     await api.post("/rooms", newRoom);
     await fetchRooms();
-    socket.emit("create-room", { roomname: newRoom.roomname });
     setNewRoom({ roomname: "", language: "javascript", visibility: "" });
     setShowModal(false);
     setTimeout(() => navigate(`/room/${id}`), 100);

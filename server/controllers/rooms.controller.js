@@ -111,4 +111,13 @@ const deleteRoom=async(req,res)=>{
     }
 }
 
-module.exports={createRoom,getRoomById,joinRoom,leaveRoom,getAllRooms,deleteRoom};
+const runCode=async(req,res)=>{
+    try {
+        const {code,lang}=req.body;
+        
+    } catch (error) {
+        
+    }
+}
+
+module.exports={createRoom,getRoomById,joinRoom,leaveRoom,getAllRooms,deleteRoom,runCode};

@@ -5,6 +5,7 @@ const cors = require("cors");
 
 const { createServer } = require("http");
 const { Server } = require("socket.io");
+const Room=require('./models/room.model')
 
 dotenv.config();
 
@@ -37,19 +38,28 @@ const io = new Server(httpServer, {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("join-room", ( roomId ) => {
+  // room 
+
+  socket.on("join-room", async( {roomId} ) => {
     socket.join(roomId);
 
     console.log(`${socket.id} joined room ${roomId}`);
-
-    socket.to(roomId).emit("user-joined", {
-      socketId: socket.id,
-    });
+    try {
+      const room=await Room.findOne({roomId:roomId}).populate("participants","username");
+      if(!room){
+        socket.emit("room-error",{
+          message:"room not found"
+        })
+      }
+      io.to(roomId).emit("room-data",room);
+    } catch (error) {
+      console.log(error);
+      socket.emit("room-error",{
+        message:"server error"
+      })
+    }
   });
 
-  socket.on("create-room", () => {
-
-  });
 
   socket.on("leave-room",(roomId)=>{
     socket.leave(roomId);
@@ -57,15 +67,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sync-code",({roomId,code})=>{
-    socket.to(roomId).emit("receive-code",code);
+    io.to(roomId).emit("receive-code",code);
   });
 
   socket.on("lang-change",({roomId,lang})=>{
-    socket.to(roomId).emit("lang-change",{lang});
+    io.to(roomId).emit("lang-change",{lang});
   })
 
   socket.on("run-code",({roomId,code,lang})=>{
-    
+    //use docker containers 
   })    
 
 
