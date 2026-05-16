@@ -1,15 +1,16 @@
 const Room=require('../models/room.model');
-const {v4:uuidv4}=require('uuid');
+const {nanoid} = require('nanoid')
 
 const createRoom=async(req,res)=>{
     try{
-        const {roomname}=req.body;
-        const existsingRoom=await Room.findOne({roomname});
-        if(existsingRoom){
-            return res.status(400).json({message:'Room name already exists'});
+        const {roomname,isPublic,language}=req.body;
+        const roomId=nanoid(10);
+        let inviteCode=null;
+        if(isPublic===false){
+            inviteCode=nanoid(8);
         }
-        const roomId=uuidv4();
-        const newRoom=new Room({roomname,roomId,owner:req.userId}); 
+        const lang=language||"javascript";
+        const newRoom=new Room({roomname,roomId,owner:req.userId,language:lang,isPublic,inviteCode}); 
         newRoom.participants.push(req.userId);
         await newRoom.save();
         res.status(201).json({message:'Room created successfully',roomId:newRoom.roomId});
@@ -19,7 +20,6 @@ catch(error){
         res.status(500).json({message:'Internal server error'});
     }   
 };
-
 const getRoomById=async(req,res)=>{
     try{
         const {roomId}=req.params;
@@ -88,4 +88,27 @@ const leaveRoom=async(req,res)=>{
 
 };
 
-module.exports={createRoom,getRoomById,joinRoom,leaveRoom};
+const getAllRooms=async(req,res)=>{
+    try {
+        const userId=req.userId;
+        const rooms=await Room.find({$or:[{owner:userId},{isPublic:true}]}).populate("participants","username");
+        res.status(200).json({rooms,userId});
+    } catch (error) {
+        console.error('Error in Get All Rooms',error);
+        res.status(500).json({message:"internal server error"})
+    }
+}
+
+
+const deleteRoom=async(req,res)=>{
+    try {
+        const {roomId}=req.params;
+        const response=await Room.deleteOne({roomId:roomId});
+        res.status(200).json({message:"succesfully deleted"});
+    } catch (error) {
+        console.error('Error in delete Rooms',error);
+        res.status(500).json({message:"internal server error"})
+    }
+}
+
+module.exports={createRoom,getRoomById,joinRoom,leaveRoom,getAllRooms,deleteRoom};

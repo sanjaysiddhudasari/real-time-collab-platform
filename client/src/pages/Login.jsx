@@ -3,7 +3,7 @@ import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,9 +22,9 @@ export default function Login() {
     try {
       const response = await api.post("/auth/login", formData);
       console.log(response.data);
-      navigate("/dashboard");
+      navigate("/");
     } catch (err) {
-      setError("Invalid email or password. Please try again.");
+      setError("Invalid username or password. Please try again.");
       console.error("Login error:", err);
     } finally {
       setLoading(false);
@@ -119,22 +119,22 @@ export default function Login() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* Email */}
+            {/* username */}
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Email address</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Username </label>
               <div className="relative">
                 <svg
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none"
+                  className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 `}
                   width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 >
-                  <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                 </svg>
                 <input
-                  type="email"
-                  placeholder="you@example.com"
+                  type="text"
+                  placeholder="Tony Stark"
                   className={inputBase}
-                  value={formData.email}
-                  onChange={handleChange("email")}
+                  value={formData.username}
+                  onChange={handleChange("username")}
                   required
                 />
               </div>

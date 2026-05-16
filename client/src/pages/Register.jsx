@@ -12,6 +12,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [strength, setStrength] = useState(0);
   const [focused, setFocused] = useState("");
+  const [error,setError]=useState("");
 
   const navigate = useNavigate();
 
@@ -33,11 +34,13 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
     try {
       const response = await api.post("/auth/register", formData);
       console.log(response.data);
       navigate("/login");
     } catch (err) {
+      setError(err.response.data.message);
       console.error("Error registering user:", err);
     } finally {
       setLoading(false);
@@ -120,6 +123,11 @@ export default function Register() {
           </div>
 
           {/* Form */}
+          {
+            error&&(
+              <p className="text-red-500 text-sm">{error}</p>
+            )
+          }
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {/* Username */}
