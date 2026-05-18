@@ -77,42 +77,7 @@ const LANGS = {
   go: { label: "Go", color: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" },
 };
 
-// ── Mock data ────────────────────────────────────────────────────────────────
-// need actual data from api here
-const MOCK_ROOMS = [
-  {
-    roomId: "rm_1",
-    roomname: "Auth Module",
-    language: "ts",
-    participants: ["AK", "JS", "MR"],
-    updatedAt: "2m ago",
-    owner: true,
-  },
-  {
-    roomId: "rm_2",
-    roomname: "API Gateway",
-    language: "go",
-    participants: ["PL"],
-    updatedAt: "18m ago",
-    owner: false,
-  },
-  {
-    roomId: "rm_3",
-    roomname: "ML Pipeline",
-    language: "py",
-    participants: ["AK", "TN", "SK", "OP"],
-    updatedAt: "1h ago",
-    owner: true,
-  },
-  {
-    roomId: "rm_4",
-    roomname: "UI Components",
-    language: "js",
-    participants: ["AK", "JS"],
-    updatedAt: "3h ago",
-    owner: false,
-  },
-];
+
 
 const AVATARS = [
   "bg-blue-500",
@@ -184,9 +149,13 @@ export default function Dashboard() {
   }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleJoin = (room) => {
+  const handleJoin =async (room) => {
     setJoining(room.roomId);
-    socket.emit("join-room", room.roomId);
+    try {
+      await api.post(`/rooms/${room.roomId}/join`);
+    } catch (error) {
+      console.log(error);
+    }
     setTimeout(() => {
       navigate(`/room/${room.roomId}`); 
     }, 600);
@@ -198,7 +167,7 @@ export default function Dashboard() {
     await fetchRooms();
     setNewRoom({ roomname: "", language: "javascript", visibility: "" });
     setShowModal(false);
-    setTimeout(() => navigate(`/room/${id}`), 100);
+    setTimeout(() => navigate(`/room/${roomId}`), 100);
   };
 
   const handleDelete = async (roomId) => {

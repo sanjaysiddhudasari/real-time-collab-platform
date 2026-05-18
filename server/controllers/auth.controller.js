@@ -24,7 +24,7 @@ const register=async(req,res)=>{
         const salt=await bcrypt.genSalt(10);
         const hashedPassword=await bcrypt.hash(password,salt);
 
-        const newUser=new User({username,email,password:hashedPassword}); 
+        const newUser=new User({username,email,password:hashedPassword,isActive:false}); 
         if(newUser){
             await newUser.save();
             generateTokenAndSetCookies(newUser._id,res);
@@ -51,7 +51,7 @@ const login=async(req,res)=>{
             return res.status(400).json({message:'Invalid credentials'});
         }
         generateTokenAndSetCookies(user._id,res);
-        res.status(200).json({message:'Login successful',user:{id:user._id,username:user.username,email:user.email}});
+        res.status(200).json({message:'Login successful',user:{id:user._id,username:user.username,email:user.email,isActive:true}});
     } catch (error) {
         res.status(500).json({message:'Internal server error'});
         console.error('Error in login:', error);
@@ -60,6 +60,8 @@ const login=async(req,res)=>{
 
 const logout=async(req,res)=>{
     try{
+        const userId=req.userId;
+        const user=await User.updateOne({userId:userId},{$set:{isActive:false}});
         res.clearCookie('jwt',{httpOnly:true,secure:process.env.NODE_ENV==='production'});
         res.status(200).json({message:'Logout successful'});
     } catch (error) {

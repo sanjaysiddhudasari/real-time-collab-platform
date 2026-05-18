@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { socket } from "../socket/socket";
 import Editor from "@monaco-editor/react";
-import api from '../services/api'
+import api from "../services/api";
+import toast from "react-hot-toast";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROOM PAGE — UI ONLY
@@ -83,69 +84,155 @@ export const authMiddleware = (
   }
 };`;
 
-
 export default function Room() {
   const { roomId } = useParams();
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user"));
 
   const [lang, setLang] = useState("typescript");
-  const [code, setCode] = useState(MOCK_CODE);
+  const [code, setCode] = useState("// write you code here");
   const [messages, setMessages] = useState(MOCK_MESSAGES);
   const [input, setInput] = useState("");
-  const [users,setUsers] = useState(MOCK_USERS);
+  const [users, setUsers] = useState(MOCK_USERS);
   const [chatOpen, setChatOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState("");
   const [outputOpen, setOutputOpen] = useState(false);
-  const [roomName,setRoomName] = useState("");
+  const [roomName, setRoomName] = useState("");
   const chatEndRef = useRef(null);
   const editorRef = useRef(null);
+  const isRemoteChange = useRef(false);
+
+  const AVATARS = [
+    "bg-blue-500",
+    "bg-violet-500",
+    "bg-green-500",
+    "bg-orange-500",
+    "bg-pink-500",
+    "bg-cyan-500",
+  ];
+  const avatarColor = (str = "U") =>
+    AVATARS[str.charCodeAt(0) % AVATARS.length];
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-
   useEffect(() => {
-    socket.emit("join-room", { roomId });
+    socket.emit("join-room", {
+      roomId,
+      userId: user.userId,
+      username: user.username,
+    });
     socket.on("room-data", (data) => {
-      const roomname=data.roomname;
-      const participants=data.participants;
+      const roomname = data.roomname;
+      const participants = data.participants;
+      console.log(`room data ${data}`);
       setUsers(participants);
       setRoomName(roomname);
     });
 
-    socket.on("room-error",({message})=>{
+    socket.on("room-error", ({ message }) => {
       console.log(message);
     });
 
-    socket.on("receive-code",(code)=>{
-      setCode(code);
+    socket.on("receive-code", ({ code }) => {
+      if (!editorRef.current) return;
+      isRemoteChange.current = true;
+      const position = editorRef.current.getPosition();
+      editorRef.current.setValue(code);
+      editorRef.current.setPosition(position);
+      isRemoteChange.current = false;
     });
 
+    socket.on("run-start", () => {
+      setIsRunning(true);
+      setOutputOpen(true);
+      setOutput("");
+    });
 
-    socket.on("lang-change", ({lang}) => setLang(lang));
+    socket.on("run-output", ({ output, error }) => {
+      setIsRunning(false);
+      if (error) {
+        setOutput(`❌ Error\n\n${error}`);
+      } else {
+        setOutput(`✅ Output\n\n${output}`);
+      }
+    });
+
+    socket.on("user-joined", ({ username }) => {
+      toast.custom(
+        (t) => (
+          <div
+            className={`flex items-center gap-3 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl transition-all ${t.visible ? "opacity-100" : "opacity-0"}`}
+          >
+            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+              {username.slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-white text-xs font-medium">
+                {username} joined the room
+              </p>
+              <p className="text-zinc-500 text-[10px] mt-0.5">Just now</p>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 ml-1 shrink-0" />
+          </div>
+        ),
+        { duration: 3000 },
+      );
+    });
+
+    socket.on("user-left", ({ username }) => {
+      toast.custom(
+        (t) => (
+          <div
+            className={`flex items-center gap-3 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl transition-all ${t.visible ? "opacity-100" : "opacity-0"}`}
+          >
+            <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center shrink-0">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#a1a1aa"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-zinc-300 text-xs font-medium">
+                {username} left the room
+              </p>
+              <p className="text-zinc-500 text-[10px] mt-0.5">Just now</p>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 ml-1 shrink-0" />
+          </div>
+        ),
+        { duration: 3000 },
+      );
+    });
+
+    socket.on("lang-change", ({ lang }) => setLang(lang));
+
     // socket.on("new-message",  (msg)    => setMessages((p) => [...p, msg]));
-    // socket.on("run-output",   (out)    => { setOutput(out); setIsRunning(false); setOutputOpen(true); });
-  
+
     return () => {
       socket.emit("leave-room", { roomId });
       socket.off("room-data");
       socket.off("receive-code");
       socket.off("room-error");
       socket.off("lang-change");
+      socket.off("run-start");
+      socket.off("run-output");
       // socket.off("new-message");
-      // socket.off("run-output");
     };
   }, [roomId]);
 
-
-  const handleCodeChange = (value) => {
-    socket.emit("sync-code", { roomId, code: value });
-  };
-
-  
   const handleLangChange = (l) => {
     socket.emit("lang-change", { roomId, lang: l });
   };
@@ -170,15 +257,9 @@ export default function Room() {
     setInput("");
   };
 
-
-  const handleRun = async() => {
-    setIsRunning(true);
-    setOutputOpen(true);
+  const handleRun = () => {
     socket.emit("run-code", { roomId, code, lang });
-    // const response=await api.post("/run", { code, lang });
-    const res=await api.post()
   };
-
 
   const handleCopyInvite = () => {
     navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`);
@@ -186,12 +267,16 @@ export default function Room() {
     setTimeout(() => setCopied(false), 2000);
   };
 
- 
-  const handleLeave = () => {
-    socket.emit("leave-room", { roomId });
+  const handleLeave = async () => {
+    socket.emit("leave-room", { roomId, username: user.username });
+    try {
+      const response = await api.post(`/rooms/${roomId}/leave`);
+      console.log(response);
+    } catch (error) {
+      console.log(`error in leaving room ${room}`);
+    }
     navigate("/");
   };
-
 
   const lines = code.split("\n");
 
@@ -250,29 +335,33 @@ export default function Room() {
                   ? "JS"
                   : l === "typescript"
                     ? "TS"
-                    : l.charAt(0).toUpperCase() + l.slice(1, 2)}
+                    : l == "java"
+                      ? "Java"
+                      : l.charAt(0).toUpperCase() + l.slice(1, 2)}
             </button>
           ))}
         </div>
 
-        {/* Right — users + actions */}
         <div className="flex items-center gap-2">
           {/* Active users */}
           <div className="hidden sm:flex items-center -space-x-1.5">
-            {users
-              .filter((u) => u.active)
-              .map((u) => (
-                <div
-                  key={u.id}
-                  title={u.name}
-                  className={`w-7 h-7 rounded-full ${u.color} flex items-center justify-center text-[10px] font-bold border-2 border-zinc-950 cursor-pointer`}
-                >
-                  {u.initials}
-                </div>
-              ))}
-            <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-zinc-950">
-              <span className="text-zinc-400 text-[9px]">+{users.length}</span>
-            </div>
+            {users?.slice(0, 4).map((u, idx) => (
+              <div
+                key={u?._id || `${u?.username}-${idx}`}
+                title={u?.username || "User"}
+                className={`w-7 h-7 rounded-full ${avatarColor(
+                  u?.username || "U",
+                )} flex items-center justify-center text-[10px] font-bold border-2 border-zinc-950 cursor-pointer`}
+              >
+                {(u?.username || "U").slice(0, 2).toUpperCase()}
+              </div>
+            ))}
+
+            {users?.length > 4 && (
+              <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] font-bold border-2 border-zinc-950">
+                +{users.length - 4}
+              </div>
+            )}
           </div>
 
           <div className="w-px h-5 bg-zinc-800" />
@@ -434,9 +523,30 @@ export default function Room() {
             <Editor
               height="100%"
               language={lang}
-              value={code}
-              onChange={handleCodeChange}
               theme="vs-dark"
+              onMount={(editor, monaco) => {
+                editorRef.current = editor;
+
+                // Enable TypeScript/JavaScript type checking
+                monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(
+                  {
+                    noSemanticValidation: false, // ← enables red squiggles
+                    noSyntaxValidation: false, // ← enables syntax squiggles
+                  },
+                );
+
+                monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
+                  {
+                    target: monaco.languages.typescript.ScriptTarget.ESNext,
+                    allowNonTsExtensions: true,
+                  },
+                );
+              }}
+              onChange={(value) => {
+                if (isRemoteChange.current) return;
+                setCode(value);
+                socket.emit("sync-code", { roomId, code: value });
+              }}
               options={{
                 fontSize: 13,
                 fontFamily: "JetBrains Mono, monospace",
@@ -446,6 +556,42 @@ export default function Room() {
                 wordWrap: "on",
                 tabSize: 2,
                 cursorBlinking: "smooth",
+
+                // ── Squiggles & validation ──────────────────────────
+                renderValidationDecorations: "on",
+
+                // ── Auto suggestions ────────────────────────────────
+                quickSuggestions: {
+                  other: true,
+                  comments: false,
+                  strings: true,
+                },
+                suggestOnTriggerCharacters: true,
+                acceptSuggestionOnEnter: "on",
+                tabCompletion: "on",
+                wordBasedSuggestions: true,
+                parameterHints: { enabled: true }, // shows fn signature
+                suggestSelection: "first",
+
+                // ── Code formatting hints ───────────────────────────
+                formatOnType: true,
+                formatOnPaste: true,
+
+                // ── Bracket & pair helpers ──────────────────────────
+                autoClosingBrackets: "always",
+                autoClosingQuotes: "always",
+                autoIndent: "full",
+                matchBrackets: "always",
+                bracketPairColorization: { enabled: true }, // colorizes bracket pairs
+
+                // ── Visual helpers ──────────────────────────────────
+                renderLineHighlight: "all",
+                smoothScrolling: true,
+                cursorSmoothCaretAnimation: "on",
+                scrollbar: {
+                  verticalScrollbarSize: 6,
+                  horizontalScrollbarSize: 6,
+                },
               }}
             />
           </div>
