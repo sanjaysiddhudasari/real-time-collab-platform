@@ -60,29 +60,24 @@ const MOCK_MESSAGES = [
   },
 ];
 
-const MOCK_CODE = `// Auth Module — JWT Middleware
-import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
+const CURSOR_COLORS = [
+  { cursor: "#f87171", label: "#ef4444" }, // red
+  { cursor: "#fb923c", label: "#f97316" }, // orange
+  { cursor: "#a78bfa", label: "#8b5cf6" }, // violet
+  { cursor: "#34d399", label: "#10b981" }, // green
+  { cursor: "#60a5fa", label: "#3b82f6" }, // blue
+  { cursor: "#f472b6", label: "#ec4899" }, // pink
+  { cursor: "#facc15", label: "#eab308" }, // yellow
+];
 
-export const authMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const token = req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ message: "No token provided" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid token" });
-  }
-};`;
+// Assign color based on userId consistently
+const getUserColorIndex = (userId) => {
+  if (!userId) return 0;
+  return (
+    userId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) %
+    CURSOR_COLORS.length
+  );
+};
 
 export default function Room() {
   const { roomId } = useParams();
@@ -103,6 +98,7 @@ export default function Room() {
   const chatEndRef = useRef(null);
   const editorRef = useRef(null);
   const isRemoteChange = useRef(false);
+  const cursorDecorations = useRef({}); // { userId: [decorationIds] }
 
   const AVATARS = [
     "bg-blue-500",
@@ -183,7 +179,7 @@ export default function Room() {
       );
     });
 
-    socket.on("user-left", ({ username }) => {
+    socket.on("user-left", ({ username, userId }) => {
       toast.custom(
         (t) => (
           <div
@@ -215,6 +211,13 @@ export default function Room() {
         ),
         { duration: 3000 },
       );
+      if (cursorDecorations.current[userId] && editorRef.current) {
+        cursorDecorations.current[userId] = editorRef.current.deltaDecorations(
+          cursorDecorations.current[userId],
+          [],
+        );
+        delete cursorDecorations.current[userId];
+      }
     });
 
     socket.on("lang-change", ({ lang }) => setLang(lang));
@@ -222,7 +225,11 @@ export default function Room() {
     // socket.on("new-message",  (msg)    => setMessages((p) => [...p, msg]));
 
     return () => {
-      socket.emit("leave-room", { roomId });
+      socket.emit("leave-room", {
+        roomId,
+        userId: user.userId,
+        username: user.username,
+      });
       socket.off("room-data");
       socket.off("receive-code");
       socket.off("room-error");
@@ -230,8 +237,76 @@ export default function Room() {
       socket.off("run-start");
       socket.off("run-output");
       // socket.off("new-message");
+      socket.off("user-joined");
+      socket.off("user-left");
+      socket.off("cursor-move");
     };
   }, [roomId]);
+
+  useEffect(() => {
+  // ─────────────────────────────────────────────
+  // Monaco cursor styles
+  // ─────────────────────────────────────────────
+  const baseStyle = document.createElement("style");
+
+  baseStyle.id = "cursor-styles";
+
+  baseStyle.innerHTML = CURSOR_COLORS.map(
+    (c, i) => `
+    
+    .cursor-line-${i} {
+      border-left: 2px solid ${c.cursor};
+      margin-left: -1px;
+      position: relative;
+    }
+
+    .cursor-line-highlight-${i} {
+      background: ${c.cursor}10 !important;
+    }
+
+    .cursor-gutter-${i}::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: ${c.cursor};
+      margin: auto;
+    }
+  `,
+  ).join("\n");
+
+  document.head.appendChild(baseStyle);
+
+  // ─────────────────────────────────────────────
+  // DOM username label styles
+  // ─────────────────────────────────────────────
+  const labelStyle = document.createElement("style");
+
+  labelStyle.id = "cursor-label-style";
+
+  labelStyle.innerHTML = `
+    .cursorLabel {
+      position: absolute;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      z-index: 1000;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+  `;
+
+  document.head.appendChild(labelStyle);
+
+  return () => {
+    document.getElementById("cursor-styles")?.remove();
+
+    document.getElementById("cursor-label-style")?.remove();
+  };
+}, []);
 
   const handleLangChange = (l) => {
     socket.emit("lang-change", { roomId, lang: l });
@@ -268,7 +343,11 @@ export default function Room() {
   };
 
   const handleLeave = async () => {
-    socket.emit("leave-room", { roomId, username: user.username });
+    socket.emit("leave-room", {
+      roomId,
+      username: user.username,
+      userId: user.userId,
+    });
     try {
       const response = await api.post(`/rooms/${roomId}/leave`);
       console.log(response);
@@ -526,6 +605,127 @@ export default function Room() {
               theme="vs-dark"
               onMount={(editor, monaco) => {
                 editorRef.current = editor;
+                window.monaco = monaco;
+                editor.onDidChangeCursorPosition((e) => {
+                  const currentUser = JSON.parse(localStorage.getItem("user"));
+                  console.log(currentUser);
+
+                  if (!currentUser) return;
+
+                  socket.emit("cursor-move", {
+                    roomId,
+
+                    userId: currentUser.userId,
+
+                    username: currentUser.username,
+
+                    position: {
+                      lineNumber: e.position.lineNumber,
+                      column: e.position.column,
+                    },
+                  });
+                });
+
+                socket.off("cursor-move");
+
+                socket.on("cursor-move", ({ userId, username, position }) => {
+                  if (!editorRef.current || !window.monaco) return;
+
+                  const editor = editorRef.current;
+                  const monaco = window.monaco;
+
+                  const colorIndex = getUserColorIndex(userId);
+                  const color = CURSOR_COLORS[colorIndex];
+
+                  // Remove old decorations
+                  if (cursorDecorations.current[userId]) {
+                    cursorDecorations.current[userId] = editor.deltaDecorations(
+                      cursorDecorations.current[userId],
+                      [],
+                    );
+                  }
+
+                  // Cursor decoration
+                  cursorDecorations.current[userId] = editor.deltaDecorations(
+                    [],
+                    [
+                      {
+                        range: new monaco.Range(
+                          position.lineNumber,
+                          position.column,
+                          position.lineNumber,
+                          position.column,
+                        ),
+
+                        options: {
+                          className: `remoteCursor${userId}`,
+                        },
+                      },
+                    ],
+                  );
+
+                  // Inject style
+                  const styleId = `style-${userId}`;
+
+                  if (!document.getElementById(styleId)) {
+                    const style = document.createElement("style");
+
+                    style.id = styleId;
+
+                    style.innerHTML = `
+      .remoteCursor${userId} {
+        border-left: 3px solid ${color.cursor};
+      }
+
+      .cursorLabel${userId} {
+        position: absolute;
+        background: ${color.label};
+        color: white;
+        padding: 2px 6px;
+        border-radius: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        z-index: 1000;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+    `;
+
+                    document.head.appendChild(style);
+                  }
+
+                  // Remove old label
+                  const oldLabel = document.getElementById(`label-${userId}`);
+
+                  if (oldLabel) oldLabel.remove();
+
+                  // Create new label
+                  const label = document.createElement("div");
+
+                  label.id = `label-${userId}`;
+                  label.className = `cursorLabel`;
+                  label.style.background = color.label;
+
+                  label.innerText = username;
+
+                  document.body.appendChild(label);
+
+                  // Get cursor coordinates
+                  const coords = editor.getScrolledVisiblePosition({
+                    lineNumber: position.lineNumber,
+                    column: position.column,
+                  });
+
+                  if (!coords) return;
+
+                  const editorDom = editor.getDomNode();
+
+                  const rect = editorDom.getBoundingClientRect();
+
+                  label.style.left = `${rect.left + coords.left + 8}px`;
+
+                  label.style.top = `${rect.top + coords.top - 22}px`;
+                });
 
                 // Enable TypeScript/JavaScript type checking
                 monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(

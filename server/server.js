@@ -22,7 +22,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "*",
     credentials: true,
   }),
 );
@@ -62,9 +62,9 @@ io.on("connection", (socket) => {
   });
 
 
-  socket.on("leave-room",async({roomId,username})=>{
+  socket.on("leave-room",async({roomId,username,userId})=>{
     socket.leave(roomId);
-    socket.to(roomId).emit("user-left",{username});
+    socket.to(roomId).emit("user-left",{username,userId});
     try {
       const room=await Room.findOne({roomId:roomId}).populate("participants","username");
       if(!room){
@@ -93,6 +93,13 @@ io.on("connection", (socket) => {
   })    
 
 
+  // cursor styles 
+
+  socket.on("cursor-move",({roomId,userId,username,position})=>{
+    socket.to(roomId).emit("cursor-move",{userId,username,position});
+  })
+
+
   //messages
 
 
@@ -104,7 +111,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT,"0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
 
   connectDb();
