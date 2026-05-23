@@ -22,7 +22,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(
   cors({
-    origin: "*",
+    origin: "http://localhost:5173",
     credentials: true,
   }),
 );
@@ -111,7 +111,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT,"0.0.0.0", () => {
+httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 
   connectDb();
