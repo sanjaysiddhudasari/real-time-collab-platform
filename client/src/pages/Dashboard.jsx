@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { socket } from "../socket/socket";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import Navbar from "./dashboard/Navbar";
-import Stats from "./dashboard/Stats";
-import Toolbar from "./dashboard/Toolbar";
-import RoomCard from "./dashboard/RoomCard";
-import CreateRoomModal from "./dashboard/CreateRoomModal";
+import Navbar from "../components/dashboard/Navbar";
+import Stats from "../components/dashboard/Stats";
+import Toolbar from "../components/dashboard/Toolbar";
+import RoomCard from "../components/dashboard/RoomCard";
+import CreateRoomModal from "../components/dashboard/CreateRoomModal";
 
 
 
