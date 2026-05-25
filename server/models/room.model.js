@@ -45,7 +45,8 @@ const roomSchema=new Schema(
         },
         inviteCode:{
             type:String,
-            unique:true
+            unique:true,
+            sparse:true
         }
     },{timestamps:true}
 );
