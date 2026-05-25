@@ -7,15 +7,13 @@ import Stats from "../components/dashboard/Stats";
 import Toolbar from "../components/dashboard/Toolbar";
 import RoomCard from "../components/dashboard/RoomCard";
 import CreateRoomModal from "../components/dashboard/CreateRoomModal";
-
-
+import useSocketStatus from "../hooks/useSocketStatus";
+import useRooms from "../hooks/useRooms";
+import useUser from "../hooks/useUser";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [connected, setConnected] = useState(false);
-  const [socketId, setSocketId] = useState("");
-  const [userId, setUserId] = useState("");
-  const [rooms, setRooms] = useState([]);
+
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [newRoom, setNewRoom] = useState({
@@ -25,49 +23,18 @@ export default function Dashboard() {
   });
   const [joining, setJoining] = useState(null);
   const [tab, setTab] = useState("all"); // all | mine
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  // ── Socket ────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    socket.connect();
+  
 
-    socket.on("connect", () => {
-      setConnected(true);
-      setSocketId(socket.id);
-    });
+  //custom hooks
 
-    socket.on("disconnect", () => {
-      setConnected(false);
-    });
+  const {user}=useUser();
+  
+  const [connected, socketId] = useSocketStatus();
 
-    return () => {
-      socket.off("connect");
-      socket.off("disconnect");
-    };
-  }, []);
+  const [rooms, loading, userId, error,fetchRooms] = useRooms();
 
-  // fetch data from server
 
-  const fetchRooms = async () => {
-    setLoading(true);
-
-    try {
-      const response = await api.get("/rooms");
-
-      setRooms(response.data.rooms);
-      setUserId(response.data.userId);
-      console.log(response);
-    } catch (error) {
-      setError(error.response?.data?.message || "Failed to fetch rooms");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRooms();
-  }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleJoin = async (room) => {
@@ -84,11 +51,11 @@ export default function Dashboard() {
 
   const handleCreate = async () => {
     if (!newRoom.roomname.trim()) return;
-    await api.post("/rooms", newRoom);
+    const response =await api.post("/rooms", newRoom);
     await fetchRooms();
     setNewRoom({ roomname: "", language: "javascript", visibility: "" });
     setShowModal(false);
-    setTimeout(() => navigate(`/room/${roomId}`), 100);
+    setTimeout(() => navigate(`/room/${response.data.roomId}`), 100);
   };
 
   const handleDelete = async (roomId) => {
@@ -124,7 +91,7 @@ export default function Dashboard() {
         }}
       />
 
-      <Navbar connected={connected} />
+      <Navbar connected={connected} user={user} />
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-8">
         <Stats

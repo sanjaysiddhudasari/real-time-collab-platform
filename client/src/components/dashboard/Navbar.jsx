@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ICONS } from "./dashboard.constants";
 import { Icon } from "../common/Icon";
 
-function Navbar({ connected }) {
+function Navbar({ connected,user }) {
+  const navigate = useNavigate();
   return (
     <nav className="relative z-10 border-b border-zinc-800/60 bg-zinc-950/70 backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
@@ -28,7 +29,7 @@ function Navbar({ connected }) {
 
           {/* Avatar */}
           <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-600 to-violet-600 flex items-center justify-center text-xs font-semibold cursor-pointer">
-            AK
+            {user.username.slice(0,2).toUpperCase()}
           </div>
 
           <button

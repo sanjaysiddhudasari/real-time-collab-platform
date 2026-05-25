@@ -1,25 +1,41 @@
 const Room=require('../models/room.model');
 const {nanoid} = require('nanoid')
 
-const createRoom=async(req,res)=>{
-    try{
-        const {roomname,isPublic,language}=req.body;
-        const roomId=nanoid(10);
-        let inviteCode=null;
-        if(isPublic===false){
-            inviteCode=nanoid(8);
-        }
-        const lang=language||"javascript";
-        const newRoom=new Room({roomname,roomId,owner:req.userId,language:lang,isPublic,inviteCode}); 
-        newRoom.participants.push(req.userId);
-        await newRoom.save();
-        res.status(201).json({message:'Room created successfully',roomId:newRoom.roomId});
-    }
-catch(error){
-        console.error('Error creating room:',error);
-        res.status(500).json({message:'Internal server error'});
-    }   
+
+const createRoom = async (req, res) => {
+  try {
+    const { roomname, language, visibility } = req.body;
+
+    const roomId     = nanoid(10);
+    const isPublic   = visibility === "public";
+    const inviteCode = !isPublic ? nanoid(8) : undefined; 
+    const lang       = language || "javascript";
+
+    const newRoom = new Room({
+      roomname,
+      roomId,
+      owner:    req.userId,
+      language: lang,
+      isPublic,
+      inviteCode,  
+    });
+
+    newRoom.participants.push(req.userId);
+    await newRoom.save();
+
+    res.status(201).json({
+      message:    "Room created successfully",
+      roomId:     newRoom.roomId,
+      inviteCode: newRoom.inviteCode || null,
+    });
+
+  } catch (error) {
+    console.error("Error creating room:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
+
+
 const getRoomById=async(req,res)=>{
     try{
         const {roomId}=req.params;
@@ -74,7 +90,7 @@ const leaveRoom=async(req,res)=>{
             if(room.participants.length>0){
                 room.owner=room.participants[0];
             }else{
-                await Room.deleteById(room._id);
+                await Room.deleteOne({_id: room._id});
                 return res.status(200).json({message:'Left room successfully, room deleted as it has no participants'});
             }
         }
