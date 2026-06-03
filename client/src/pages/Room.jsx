@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { socket } from "../socket/socket";
-import Editor from "@monaco-editor/react";
+import MonacoEditor from "../components/room/MonacoEditor";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import RoomNav from "../components/room/RoomNav";
@@ -26,13 +26,7 @@ const CURSOR_COLORS = [
 ];
 
 // Assign color based on userId consistently
-const getUserColorIndex = (userId) => {
-  if (!userId) return 0;
-  return (
-    userId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) %
-    CURSOR_COLORS.length
-  );
-};
+
 
 export default function Room() {
   const { roomId } = useParams();
@@ -273,15 +267,16 @@ export default function Room() {
     socket.emit("lang-change", { roomId, lang: l });
   };
 
-  //handle later
+  
   const handleSend = () => {
     if (!input.trim()) return;
     const msg={
       roomId,
-      sender:user.username,
+      userId: user.userId,
       content:input,
     };
-    socket.emit("send-message", { message: msg });
+    console.log(user);
+    socket.emit("send-message", msg);
     setInput("");
   };
 
@@ -368,208 +363,13 @@ export default function Room() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden relative">
-            <Editor
-              height="100%"
-              language={lang}
-              theme="vs-dark"
-              onMount={(editor, monaco) => {
-                editorRef.current = editor;
-                window.monaco = monaco;
-                editor.onDidChangeCursorPosition((e) => {
-                  const currentUser = JSON.parse(localStorage.getItem("user"));
-                  console.log(currentUser);
-
-                  if (!currentUser) return;
-
-                  socket.emit("cursor-move", {
-                    roomId,
-
-                    userId: currentUser.userId,
-
-                    username: currentUser.username,
-
-                    position: {
-                      lineNumber: e.position.lineNumber,
-                      column: e.position.column,
-                    },
-                  });
-                });
-
-                socket.off("cursor-move");
-
-                socket.on("cursor-move", ({ userId, username, position }) => {
-                  if (!editorRef.current || !window.monaco) return;
-
-                  const editor = editorRef.current;
-                  const monaco = window.monaco;
-
-                  const colorIndex = getUserColorIndex(userId);
-                  const color = CURSOR_COLORS[colorIndex];
-
-                  // Remove old decorations
-                  if (cursorDecorations.current[userId]) {
-                    cursorDecorations.current[userId] = editor.deltaDecorations(
-                      cursorDecorations.current[userId],
-                      [],
-                    );
-                  }
-
-                  // Cursor decoration
-                  cursorDecorations.current[userId] = editor.deltaDecorations(
-                    [],
-                    [
-                      {
-                        range: new monaco.Range(
-                          position.lineNumber,
-                          position.column,
-                          position.lineNumber,
-                          position.column,
-                        ),
-
-                        options: {
-                          className: `remoteCursor${userId}`,
-                        },
-                      },
-                    ],
-                  );
-
-                  // Inject style
-                  const styleId = `style-${userId}`;
-
-                  if (!document.getElementById(styleId)) {
-                    const style = document.createElement("style");
-
-                    style.id = styleId;
-
-                    style.innerHTML = `
-      .remoteCursor${userId} {
-        border-left: 3px solid ${color.cursor};
-      }
-
-      .cursorLabel${userId} {
-        position: absolute;
-        background: ${color.label};
-        color: white;
-        padding: 2px 6px;
-        border-radius: 5px;
-        font-size: 11px;
-        font-weight: 600;
-        z-index: 1000;
-        pointer-events: none;
-        white-space: nowrap;
-      }
-    `;
-
-                    document.head.appendChild(style);
-                  }
-
-                  // Remove old label
-                  const oldLabel = document.getElementById(`label-${userId}`);
-
-                  if (oldLabel) oldLabel.remove();
-
-                  // Create new label
-                  const label = document.createElement("div");
-
-                  label.id = `label-${userId}`;
-                  label.className = `cursorLabel`;
-                  label.style.background = color.label;
-
-                  label.innerText = username;
-
-                  document.body.appendChild(label);
-
-                  // Get cursor coordinates
-                  const coords = editor.getScrolledVisiblePosition({
-                    lineNumber: position.lineNumber,
-                    column: position.column,
-                  });
-
-                  if (!coords) return;
-
-                  const editorDom = editor.getDomNode();
-
-                  const rect = editorDom.getBoundingClientRect();
-
-                  label.style.left = `${rect.left + coords.left + 8}px`;
-
-                  label.style.top = `${rect.top + coords.top - 22}px`;
-                });
-
-                // Enable TypeScript/JavaScript type checking
-                monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(
-                  {
-                    noSemanticValidation: false, // ← enables red squiggles
-                    noSyntaxValidation: false, // ← enables syntax squiggles
-                  },
-                );
-
-                monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
-                  {
-                    target: monaco.languages.typescript.ScriptTarget.ESNext,
-                    allowNonTsExtensions: true,
-                  },
-                );
-              }}
-              onChange={(value) => {
-                if (isRemoteChange.current) return;
-                setCode(value);
-                socket.emit("sync-code", { roomId, code: value });
-              }}
-              options={{
-                fontSize: 13,
-                fontFamily: "JetBrains Mono, monospace",
-                minimap: { enabled: false },
-                lineNumbers: "on",
-                scrollBeyondLastLine: false,
-                wordWrap: "on",
-                tabSize: 2,
-                cursorBlinking: "smooth",
-
-                // ── Squiggles & validation ──────────────────────────
-                renderValidationDecorations: "on",
-
-                // ── Auto suggestions ────────────────────────────────
-                quickSuggestions: {
-                  other: true,
-                  comments: false,
-                  strings: true,
-                },
-                suggestOnTriggerCharacters: true,
-                acceptSuggestionOnEnter: "on",
-                tabCompletion: "on",
-                wordBasedSuggestions: true,
-                parameterHints: { enabled: true }, // shows fn signature
-                suggestSelection: "first",
-
-                // ── Code formatting hints ───────────────────────────
-                formatOnType: true,
-                formatOnPaste: true,
-
-                // ── Bracket & pair helpers ──────────────────────────
-                autoClosingBrackets: "always",
-                autoClosingQuotes: "always",
-                autoIndent: "full",
-                matchBrackets: "always",
-                bracketPairColorization: { enabled: true }, // colorizes bracket pairs
-
-                // ── Visual helpers ──────────────────────────────────
-                renderLineHighlight: "all",
-                smoothScrolling: true,
-                cursorSmoothCaretAnimation: "on",
-                scrollbar: {
-                  verticalScrollbarSize: 6,
-                  horizontalScrollbarSize: 6,
-                },
-              }}
-            />
-          </div>
+        
+            <MonacoEditor lang={lang} roomId={roomId} editorRef={editorRef} cursorDecorations={cursorDecorations} isRemoteChange={isRemoteChange} />
 
           {/* ── Output panel ────────────────────────────────────────────────── */}
 
           {outputOpen && (
-            <OutputPanel setOutputOpen={setOutput} isRunning={isRunning} output={output} />
+            <OutputPanel setOutputOpen={setOutputOpen} isRunning={isRunning} output={output} />
           )}
 
         </div>

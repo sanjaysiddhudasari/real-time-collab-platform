@@ -9,11 +9,13 @@ const { createServer } = require("http");
 const { Server } = require("socket.io");
 const Room=require('./models/room.model')
 const User=require('./models/user.model')
+const Message=require('./models/message.model')
 
 dotenv.config();
 
 const authRoutes = require("./routes/auth.routes");
 const roomRoutes = require("./routes/rooms.routes");
+const messageRoutes=require('./routes/message.routes')
 const connectDb = require("./db/connection");
 
 const app = express();
@@ -29,7 +31,7 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
-
+app.use("/api/messages",messageRoutes);
 const httpServer = createServer(app);
 const io = initSocket(httpServer);
 
@@ -43,7 +45,10 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     console.log(`${socket.id} joined room ${roomId}`);
     try {
-      const room=await Room.findOne({roomId:roomId}).populate("participants","username");
+      const room=await Room.findOne({roomId:roomId}).populate([
+        { path: "participants", select: "username" },
+        { path: "messages", populate: { path: "sender", select: "username" } }
+      ]);
       if(!room){
         socket.emit("room-error",{
           message:"room not found"
@@ -102,7 +107,31 @@ io.on("connection", (socket) => {
 
   //messages
 
-
+  socket.on("send-message",async({roomId,userId,content})=>{
+    try {
+      const user=await User.findById(userId);
+      if(!user){
+        socket.emit("message-error",{message:"user not found"});
+      }
+      console.log({roomId,userId,content});
+      const message=await Message.create({
+        roomId,
+        sender:userId,
+        content:content
+      });
+      const room=await Room.findOne({roomId:roomId});
+      if(!room){
+        socket.emit("message-error",{message:"room not found"});
+      }
+      room.messages.push(message._id);
+      await room.save();
+      const populatedMessage=await Message.findById(message._id).populate('sender');
+      io.to(roomId).emit("new-message",populatedMessage);
+    } catch (error) {
+      console.log(error);
+      socket.emit("message-error",{message:"server error"});
+    }
+  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
