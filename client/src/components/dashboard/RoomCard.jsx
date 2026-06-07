@@ -1,4 +1,3 @@
-import React from "react";
 import { Icon } from "../common/Icon";
 import { LANGS, avatarColor, ICONS } from "./dashboard.constants";
 import { formatDistanceToNow } from "date-fns";
@@ -20,7 +19,7 @@ function RoomCard({ rooms, userId, onJoin, onDelete, joining, tab, search }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((room) => {
             console.log(room);
-            const lang = LANGS[room.language];
+            const lang = LANGS[room.files[0]?.lang || "javascript"];
             const isJoining = joining === room.roomId;
             return (
               <div

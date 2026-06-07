@@ -84,12 +84,25 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("sync-code",({roomId,code})=>{
-    io.to(roomId).emit("receive-code",{code});
+  socket.on("sync-code",async({roomId,code,fileId})=>{
+    const room=await Room.findOne({roomId:roomId});
+    const file=room.files.find(f=>f._id.toString()===fileId.toString());
+    if(file){
+      file.code=code;
+      await room.save();
+    }
+    socket.to(roomId).emit("receive-code",{code,fileId});
   });
 
-  socket.on("lang-change",({roomId,lang})=>{
-    io.to(roomId).emit("lang-change",{lang});
+  socket.on("lang-change",async({roomId,lang,fileId})=>{
+    const room =await Room.findOne({roomId:roomId});
+    const file=room.files.find(f=>f._id.toString()===fileId.toString());
+    console.log({roomId,lang,fileId});
+    if(file){
+      file.lang=lang;
+      await room.save();
+    }
+    io.to(roomId).emit("lang-change",{lang,fileId});
   })
 
   socket.on("run-code",({roomId,code,lang})=>{

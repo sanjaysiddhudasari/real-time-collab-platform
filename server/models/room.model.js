@@ -24,14 +24,27 @@ const roomSchema=new Schema(
                 default:[]
             }
         ],
-        currentCode:{
-            type:String,
-            default:''
-        },
-        language:{
-            type:String,
-            default:'javascript'
-        },
+        files:[
+            {
+                name:{
+                    type:String,
+                    required:true,
+                    default:'main.js'
+                },
+                lang:{
+                    type:String,
+                    required:true,
+                    default:'javascript'
+                },
+                code:{
+                    type:String,
+                    default:'// Write your code here'
+                },
+                createdAt:{
+                    type:Date
+                }
+            }
+        ],
         messages:[
             {
                 type:mongoose.Schema.Types.ObjectId,    

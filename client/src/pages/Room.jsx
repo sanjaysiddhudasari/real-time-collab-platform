@@ -7,13 +7,7 @@ import toast from "react-hot-toast";
 import RoomNav from "../components/room/RoomNav";
 import OutputPanel from "../components/room/OutputPanel";
 import ChatSideBar from "../components/room/ChatSideBar";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ROOM PAGE — UI ONLY
-// All function placeholders are marked with:  🔌 ADD FUNCTION HERE
-// ─────────────────────────────────────────────────────────────────────────────
-
-
+import FileTab from "../components/room/FileTab";
 
 const CURSOR_COLORS = [
   { cursor: "#f87171", label: "#ef4444" }, // red
@@ -25,16 +19,13 @@ const CURSOR_COLORS = [
   { cursor: "#facc15", label: "#eab308" }, // yellow
 ];
 
-// Assign color based on userId consistently
-
-
 export default function Room() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
 
-  const [lang, setLang] = useState("typescript");
-  const [code, setCode] = useState("// write you code here");
+  const [files, setFiles] = useState([]);
+  const [activeFileId, setActiveFileId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [users, setUsers] = useState([]);
@@ -49,8 +40,10 @@ export default function Room() {
   const isRemoteChange = useRef(false);
   const cursorDecorations = useRef({}); // { userId: [decorationIds] }
 
- 
- 
+  const activeFile = files?.find(
+    (file) => file?._id?.toString() === activeFileId?.toString(),
+  );
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -67,11 +60,16 @@ export default function Room() {
     socket.on("room-data", (data) => {
       const roomname = data.roomname;
       const participants = data.participants;
-      const messages=data.messages.map((msg) => ({
+      const messages = data.messages.map((msg) => ({
         ...msg,
         self: msg?.sender?._id?.toString() === user?.userId?.toString(),
       }));
       setMessages(messages);
+      const files = data.files || [];
+      setFiles(files);
+      if (files.length > 0) {
+        setActiveFileId(files[0]._id);
+      }
       console.log(data);
       setUsers(participants);
       setRoomName(roomname);
@@ -81,14 +79,14 @@ export default function Room() {
       console.log(message);
     });
 
-    socket.on("receive-code", ({ code }) => {
-      if (!editorRef.current) return;
-      isRemoteChange.current = true;
-      const position = editorRef.current.getPosition();
-      setCode(code);
-      editorRef.current.setValue(code);
-      editorRef.current.setPosition(position);
-      isRemoteChange.current = false;
+    socket.on("receive-code", ({ code, fileId }) => {
+      setFiles((prev) =>
+        prev.map((file) =>
+          file?._id?.toString() === fileId?.toString()
+            ? { ...file, code }
+            : file,
+        ),
+      );
     });
 
     socket.on("run-start", () => {
@@ -169,15 +167,24 @@ export default function Room() {
       }
     });
 
-    socket.on("lang-change", ({ lang }) => setLang(lang));
+    socket.on("lang-change", ({ lang, fileId }) => {
+      console.log({ lang, fileId });
+      setFiles((prev) =>
+        prev.map((file) =>
+          file?._id?.toString() === fileId?.toString()
+            ? { ...file, lang }
+            : file,
+        ),
+      );
+    });
 
-    socket.on("new-message",  (msg)=>{
-      const formattedMsg={
+    socket.on("new-message", (msg) => {
+      const formattedMsg = {
         ...msg,
-        self: msg?.sender._id?.toString() === user?.userId?.toString(),
-      }
+        self: msg?.sender?._id?.toString() === user?.userId?.toString(),
+      };
       setMessages((prev) => [...prev, formattedMsg]);
-    }); 
+    });
 
     return () => {
       socket.emit("leave-room", {
@@ -196,7 +203,7 @@ export default function Room() {
       socket.off("user-left");
       socket.off("cursor-move");
     };
-  }, [roomId,user.userId,user.username]);
+  }, [roomId, user.userId, user.username]); //here the issue
 
   useEffect(() => {
     // ─────────────────────────────────────────────
@@ -264,16 +271,15 @@ export default function Room() {
   }, []);
 
   const handleLangChange = (l) => {
-    socket.emit("lang-change", { roomId, lang: l });
+    socket.emit("lang-change", { roomId, lang: l, fileId: activeFileId });
   };
 
-  
   const handleSend = () => {
     if (!input.trim()) return;
-    const msg={
+    const msg = {
       roomId,
       userId: user.userId,
-      content:input,
+      content: input,
     };
     console.log(user);
     socket.emit("send-message", msg);
@@ -281,7 +287,11 @@ export default function Room() {
   };
 
   const handleRun = () => {
-    socket.emit("run-code", { roomId, code, lang });
+    socket.emit("run-code", {
+      roomId,
+      code: activeFile.code,
+      lang: activeFile.lang,
+    });
   };
 
   const handleCopyInvite = () => {
@@ -304,16 +314,14 @@ export default function Room() {
     }
     navigate("/");
   };
-
-
-
+  console.log(files);
   return (
     <div className="h-screen bg-[#0d0d12] flex flex-col overflow-hidden font-mono">
       {/* ── Top Navbar ─────────────────────────────────────────────────────── */}
 
       <RoomNav
         users={users}
-        lang={lang}
+        lang={activeFile?.lang}
         setChatOpen={setChatOpen}
         chatOpen={chatOpen}
         roomName={roomName}
@@ -329,56 +337,41 @@ export default function Room() {
       <div className="flex flex-1 overflow-hidden">
         {/* ── Editor pane ─────────────────────────────────────────────────── */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* File tab bar */}
-          <div className="h-9 bg-zinc-950 border-b border-zinc-800/50 flex items-end px-3 gap-0.5 shrink-0">
-            <div className="flex items-center gap-2 bg-[#0d0d12] border border-zinc-800/70 border-b-0 rounded-t-md px-3 py-1.5 text-xs text-zinc-300">
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-              middleware.ts
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors">
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-              routes.ts
-            </div>
-          </div>
+          <FileTab
+            files={files}
+            activeFileId={activeFileId}
+            setActiveFileId={setActiveFileId}
+          />
 
-        
-            <MonacoEditor lang={lang} roomId={roomId} editorRef={editorRef} cursorDecorations={cursorDecorations} isRemoteChange={isRemoteChange} />
-
-          {/* ── Output panel ────────────────────────────────────────────────── */}
+          <MonacoEditor
+            activeFileId={activeFileId}
+            files={files}
+            setFiles={setFiles}
+            roomId={roomId}
+            editorRef={editorRef}
+            cursorDecorations={cursorDecorations}
+            isRemoteChange={isRemoteChange}
+          />
 
           {outputOpen && (
-            <OutputPanel setOutputOpen={setOutputOpen} isRunning={isRunning} output={output} />
+            <OutputPanel
+              setOutputOpen={setOutputOpen}
+              isRunning={isRunning}
+              output={output}
+            />
           )}
-
         </div>
 
-        {/* ── Chat sidebar ─────────────────────────────────────────────────── */}
         {chatOpen && (
-          <ChatSideBar users={users} messages={messages} input={input} setInput={setInput} handleSend={handleSend} chatEndRef={chatEndRef} />
+          <ChatSideBar
+            users={users}
+            messages={messages}
+            input={input}
+            setInput={setInput}
+            handleSend={handleSend}
+            chatEndRef={chatEndRef}
+          />
         )}
-
       </div>
     </div>
   );
