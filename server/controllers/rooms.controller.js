@@ -36,17 +36,20 @@ const createRoom = async (req, res) => {
 };
 
 
-const getRoomById=async(req,res)=>{
-    try{
-        const {roomId}=req.params;
-        const room=await Room.findOne({roomId});
-        if(!room){
-            return res.status(404).json({message:'Room not found'});
+const getRoomById = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const room = await Room.findOne({roomId}).populate([
+            { path: "participants", select: "username" },
+            { path: "messages", populate: { path: "sender", select: "username" } }
+        ]);
+        if (!room) {
+            return res.status(404).json({ message: 'Room not found' });
         }
-        res.status(200).json({room});
-    }catch(error){
-        console.error('Error fetching room:',error);
-        res.status(500).json({message:'Internal server error'});
+        res.status(200).json({ room });
+    } catch (error) {
+        console.error('Error fetching room:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 

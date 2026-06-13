@@ -9,8 +9,6 @@ export const useCursorTracking = ({ roomId, socket }) => {
 
       socket.emit("cursor-move", {
         roomId,
-        userId: currentUser.userId,
-        username: currentUser.username,
         position: {
           lineNumber: e.position.lineNumber,
           column: e.position.column,

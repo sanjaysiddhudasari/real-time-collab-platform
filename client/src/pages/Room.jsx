@@ -48,11 +48,35 @@ export default function Room() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  //on intial load
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      try {
+        const res = await api.get(`/rooms/${roomId}`);
+        const data = res.data.room;
+
+        setFiles(data.files);
+        setRoomName(data.roomname);
+        const messages = data.messages.map((msg) => ({
+          ...msg,
+          self: msg?.sender?._id?.toString() === user?.userId?.toString(),
+        }));
+        setMessages(messages);
+
+        if (data.files && data.files.length > 0) {
+          setActiveFileId(data.files[0]._id);
+        }
+      } catch (error) {
+        toast.error("failed to load file", error);
+      }
+    };
+
+    fetchRoomData();
+  }, [roomId, user]);
+
   useEffect(() => {
     socket.emit("join-room", {
       roomId,
-      userId: user.userId,
-      username: user.username,
     });
 
     // load messages already included in room data
@@ -189,8 +213,6 @@ export default function Room() {
     return () => {
       socket.emit("leave-room", {
         roomId,
-        userId: user.userId,
-        username: user.username,
       });
       socket.off("room-data");
       socket.off("receive-code");
@@ -278,7 +300,6 @@ export default function Room() {
     if (!input.trim()) return;
     const msg = {
       roomId,
-      userId: user.userId,
       content: input,
     };
     console.log(user);
@@ -289,8 +310,7 @@ export default function Room() {
   const handleRun = () => {
     socket.emit("run-code", {
       roomId,
-      code: activeFile.code,
-      lang: activeFile.lang,
+      fileId: activeFileId,
     });
   };
 
@@ -303,8 +323,6 @@ export default function Room() {
   const handleLeave = async () => {
     socket.emit("leave-room", {
       roomId,
-      username: user.username,
-      userId: user.userId,
     });
     try {
       const response = await api.post(`/rooms/${roomId}/leave`);
