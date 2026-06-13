@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect,useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { socket } from "../socket/socket";
 import MonacoEditor from "../components/room/MonacoEditor";
@@ -22,7 +22,7 @@ const CURSOR_COLORS = [
 export default function Room() {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = useMemo(() => JSON.parse(localStorage.getItem("user")), []);
 
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
@@ -72,7 +72,7 @@ export default function Room() {
     };
 
     fetchRoomData();
-  }, [roomId, user]);
+  }, [roomId]);
 
   useEffect(() => {
     socket.emit("join-room", {
