@@ -1,55 +1,46 @@
-export const createCursorDecoration = (monaco, position, userId) => ({
-  range: new monaco.Range(
-    position.lineNumber,
-    position.column,
-    position.lineNumber,
-    position.column
-  ),
-  options: {
-    className: `remoteCursor${userId}`,
-  },
-});
 
-export const injectCursorStyles = (userId, color) => {
-  const styleId = `style-${userId}`;
+import { getUserColorIndex } from "./cursorColors";
 
-  if (document.getElementById(styleId)) return;
-
-  const style = document.createElement("style");
-  style.id = styleId;
-  style.innerHTML = `
-    .remoteCursor${userId} {
-      border-left: 3px solid ${color.cursor};
-    }
-
-    .cursorLabel${userId} {
-      position: absolute;
-      background: ${color.label};
-      color: white;
-      padding: 2px 6px;
-      border-radius: 5px;
-      font-size: 11px;
-      font-weight: 600;
-      z-index: 1000;
-      pointer-events: none;
-      white-space: nowrap;
-    }
-  `;
-
-  document.head.appendChild(style);
+export const createCursorDecoration = (monaco, position, userId) => {
+  const colorIndex = getUserColorIndex(userId); // Get the color index
+  return {
+    range: new monaco.Range(
+      position.lineNumber,
+      position.column,
+      position.lineNumber,
+      position.column
+    ),
+    options: {
+      className: `remote-cursor-line-${colorIndex}`, // Use the centralized class
+      // You might also want to add 'linesDecorationsClassName' for the gutter
+      // linesDecorationsClassName: `remote-cursor-gutter-${colorIndex}`,
+    },
+  };
 };
 
-export const createCursorLabel = (userId, username, color) => {
-  const oldLabel = document.getElementById(`label-${userId}`);
-  if (oldLabel) oldLabel.remove();
 
-  const label = document.createElement("div");
-  label.id = `label-${userId}`;
-  label.className = `cursorLabel`;
-  label.style.background = color.label;
-  label.innerText = username;
 
-  document.body.appendChild(label);
+
+
+export const createCursorLabel = (userId, username) => {
+  let label = document.getElementById(`label-${userId}`);
+  const colorIndex = getUserColorIndex(userId); // Get the color index
+
+  if (!label) {
+    label = document.createElement("div");
+    label.id = `label-${userId}`;
+    // Apply the centralized class
+    label.className = `remote-cursor-label-${colorIndex}`;
+    document.body.appendChild(label);
+  }
+
+  // Only update text if it actually changed, no recreation
+  if (label.innerText !== username) {
+    label.innerText = username;
+  }
+
+  // No inline style needed anymore if class is applied correctly
+
   return label;
 };
 

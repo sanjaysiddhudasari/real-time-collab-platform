@@ -35,6 +35,9 @@ app.use("/api/messages", messageRoutes);
 const httpServer = createServer(app);
 const io = initSocket(httpServer);
 
+// Track which rooms each user is in (for clean disconnect handling)
+const userRooms = new Map(); // userId → { rooms: Set<roomId>, username: string }
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
@@ -43,28 +46,45 @@ io.on("connection", (socket) => {
 
   socket.on("join-room", async ({ roomId }) => {
     const room = await Room.findOne({roomId:roomId});
+    if (!room) {
+      socket.emit("room-error", { message: "room not found" });
+      return;
+    }
     const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
     }
     socket.join(roomId);
+
+    // Track this user's room membership
+    const uid = socket.userId.toString();
+    if (!userRooms.has(uid)) {
+      userRooms.set(uid, { rooms: new Set(), username: '' });
+    }
+    userRooms.get(uid).rooms.add(roomId);
+
     const userId = socket.userId.toString();
     const username = await User.findById(userId).then(u => u.username).catch(e => null);
+    // Cache username for disconnect use
+    if (userRooms.has(uid)) {
+      userRooms.get(uid).username = username || 'Unknown';
+    }
+
     console.log(`${socket.id} joined room ${roomId}`);
     try {
-      const room = await Room.findOne({ roomId: roomId }).populate([
+      const roomData = await Room.findOne({ roomId: roomId }).populate([
         { path: "participants", select: "username" },
         { path: "messages", populate: { path: "sender", select: "username" } }
       ]);
-      if (!room) {
+      if (!roomData) {
         socket.emit("room-error", {
           message: "room not found"
         })
         return;
       }
-      console.log(room);
-      io.to(roomId).emit("room-data", room);
+      console.log(roomData);
+      io.to(roomId).emit("room-data", roomData);
       console.log(socket.userId.toString(), userId);
       io.to(roomId).emit("user-joined", { username });
     } catch (error) {
@@ -84,16 +104,29 @@ io.on("connection", (socket) => {
     }
     const username = user.username;
     socket.leave(roomId);
+
+    // Clean up room tracking
+    const uid = socket.userId.toString();
+    if (userRooms.has(uid)) {
+      userRooms.get(uid).rooms.delete(roomId);
+      if (userRooms.get(uid).rooms.size === 0) {
+        userRooms.delete(uid);
+      }
+    }
+
     socket.to(roomId).emit("user-left", { username, userId: socket.userId.toString() });
     try {
-      const room = await Room.findOne({ roomId: roomId }).populate("participants", "username");
-      if (!room) {
+      const roomData = await Room.findOne({ roomId: roomId }).populate([
+        { path: "participants", select: "username" },
+        { path: "messages", populate: { path: "sender", select: "username" } }
+      ]);
+      if (!roomData) {
         socket.emit("room-error", {
           message: "server error "
         })
         return;
       }
-      socket.to(roomId).emit("room-data", room);
+      socket.to(roomId).emit("room-data", roomData);
     } catch (error) {
       console.log(error);
       socket.emit("room-error", { message: "server error " });
@@ -101,6 +134,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sync-code", async ({ roomId, code, fileId }) => {
+    console.log({roomId,code,fileId});
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("room-error", { message: "room not found" });
@@ -138,18 +172,18 @@ io.on("connection", (socket) => {
       file.lang = lang;
       await room.save();
     }
-    io.to(roomId).emit("lang-change", { lang, fileId });
+    socket.to(roomId).emit("lang-change", { lang, fileId });
   })
 
   socket.on("run-code", async ({ roomId, fileId }) => {
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
-      socket.error("room-error", { message: "room not found" });
+      socket.emit("room-error", { message: "room not found" });
       return;
     };
     const file = room.files.find(f => f && f._id.toString() === fileId.toString());
     if (!file) {
-      socket.error("room-error", { message: " file not found " })
+      socket.emit("room-error", { message: " file not found " })
       return;
     }
     runCode({ code: file.code, lang: file.lang, roomId }, io);
@@ -159,15 +193,20 @@ io.on("connection", (socket) => {
 
   // cursor styles 
 
-  socket.on("cursor-move", async ({ roomId, position }) => {
+  socket.on("cursor-move", async ({ roomId, fileId, position }) => {
     const room = await Room.findOne({ roomId: roomId });
+    if (!room) {
+      socket.emit("room-error", { message: "room not found" });
+      return;
+    }
     const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
     }
-    const username = await User.findById(socket.userId);
-    socket.to(roomId).emit("cursor-move", { userId: socket.userId.toString(), username, position });
+    const user= await User.findById(socket.userId).select('username');
+    const username=user.username; 
+    socket.to(roomId).emit("cursor-move", { userId: socket.userId.toString(), username, fileId, position });
   });
 
 
@@ -196,11 +235,6 @@ io.on("connection", (socket) => {
         sender: socket.userId.toString(),
         content: content
       });
-      const room = await Room.findOne({ roomId: roomId });
-      if (!room) {
-        socket.emit("message-error", { message: "room not found" });
-        return;
-      }
       room.messages.push(message._id);
       await room.save();
       const populatedMessage = await Message.findById(message._id).populate('sender');
@@ -211,8 +245,18 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("User disconnected:", socket.id);
+    const uid = socket.userId?.toString();
+    if (uid && userRooms.has(uid)) {
+      const { rooms, username } = userRooms.get(uid);
+      // Emit user-left to every room this user was in
+      for (const roomId of rooms) {
+        io.to(roomId).emit("user-left", { username, userId: uid });
+      }
+      userRooms.delete(uid);
+      console.log(`Cleaned up ${rooms.size} room(s) for disconnected user ${uid}`);
+    }
   });
 });
 

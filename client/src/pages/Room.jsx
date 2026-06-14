@@ -59,7 +59,10 @@ export default function Room() {
         setRoomName(data.roomname);
         const messages = data.messages.map((msg) => ({
           ...msg,
-          self: msg?.sender?._id?.toString() === user?.userId?.toString(),
+          sender: msg.sender?.username
+            ? msg.sender
+            : { _id: msg.sender, username: 'Unknown' },
+          self: (msg.sender?._id?.toString() || msg.sender?.toString()) === user?.userId?.toString(),
         }));
         setMessages(messages);
 
@@ -86,7 +89,10 @@ export default function Room() {
       const participants = data.participants;
       const messages = data.messages.map((msg) => ({
         ...msg,
-        self: msg?.sender?._id?.toString() === user?.userId?.toString(),
+        sender: msg.sender?.username
+          ? msg.sender
+          : { _id: msg.sender, username: 'Unknown' },
+        self: (msg.sender?._id?.toString() || msg.sender?.toString()) === user?.userId?.toString(),
       }));
       setMessages(messages);
       const files = data.files || [];
@@ -182,6 +188,13 @@ export default function Room() {
         ),
         { duration: 3000 },
       );
+
+      const label = document.getElementById(`label-${userId}`);
+      if (label) label.remove();
+
+      const style = document.getElementById(`style-${userId}`);
+      if (style) style.remove();
+
       if (cursorDecorations.current[userId] && editorRef.current) {
         cursorDecorations.current[userId] = editorRef.current.deltaDecorations(
           cursorDecorations.current[userId],
@@ -205,7 +218,10 @@ export default function Room() {
     socket.on("new-message", (msg) => {
       const formattedMsg = {
         ...msg,
-        self: msg?.sender?._id?.toString() === user?.userId?.toString(),
+        sender: msg.sender?.username
+          ? msg.sender
+          : { _id: msg.sender, username: 'Unknown' },
+        self: (msg.sender?._id?.toString() || msg.sender?.toString()) === user?.userId?.toString(),
       };
       setMessages((prev) => [...prev, formattedMsg]);
     });
@@ -224,73 +240,60 @@ export default function Room() {
       socket.off("user-joined");
       socket.off("user-left");
       socket.off("cursor-move");
+      // Remove all floating cursor labels
+      document.querySelectorAll('[id^="label-"]').forEach((el) => el.remove());
+      // Clear all cursor decorations
+      cursorDecorations.current = {};
     };
-  }, [roomId, user.userId, user.username]); //here the issue
+  }, [roomId]);
 
-  useEffect(() => {
-    // ─────────────────────────────────────────────
-    // Monaco cursor styles
-    // ─────────────────────────────────────────────
-    const baseStyle = document.createElement("style");
 
-    baseStyle.id = "cursor-styles";
-
-    baseStyle.innerHTML = CURSOR_COLORS.map(
+    useEffect(() => {
+    const styleTag = document.createElement("style");
+    styleTag.id = "dynamic-cursor-styles"; // Single ID for our combined styles
+    styleTag.innerHTML = CURSOR_COLORS.map(
       (c, i) => `
-    
-    .cursor-line-${i} {
-      border-left: 2px solid ${c.cursor};
-      margin-left: -1px;
-      position: relative;
-    }
-
-    .cursor-line-highlight-${i} {
-      background: ${c.cursor}10 !important;
-    }
-
-    .cursor-gutter-${i}::before {
-      content: '';
-      display: block;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: ${c.cursor};
-      margin: auto;
-    }
-  `,
+        /* Monaco Editor Cursor for Color Index ${i} */
+        .remote-cursor-line-${i} {
+          border-left: 2px solid ${c.cursor};
+          margin-left: -1px;
+          position: relative;
+        }
+        .remote-cursor-line-highlight-${i} {
+          background: ${c.cursor}10 !important;
+        }
+        /* Gutter Icon for Color Index ${i} */
+        .remote-cursor-gutter-${i}::before {
+          content: '';
+          display: block;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: ${c.cursor};
+          margin: auto;
+        }
+        /* Floating Label for Color Index ${i} */
+        .remote-cursor-label-${i} {
+          position: absolute;
+          background: ${c.label};
+          color: white;
+          padding: 2px 6px;
+          border-radius: 5px;
+          font-size: 11px;
+          font-weight: 600;
+          z-index: 1000;
+          pointer-events: none;
+          white-space: nowrap;
+        }
+      `,
     ).join("\n");
 
-    document.head.appendChild(baseStyle);
-
-    // ─────────────────────────────────────────────
-    // DOM username label styles
-    // ─────────────────────────────────────────────
-    const labelStyle = document.createElement("style");
-
-    labelStyle.id = "cursor-label-style";
-
-    labelStyle.innerHTML = `
-    .cursorLabel {
-      position: absolute;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 5px;
-      font-size: 11px;
-      font-weight: 600;
-      z-index: 1000;
-      pointer-events: none;
-      white-space: nowrap;
-    }
-  `;
-
-    document.head.appendChild(labelStyle);
+    document.head.appendChild(styleTag);
 
     return () => {
-      document.getElementById("cursor-styles")?.remove();
-
-      document.getElementById("cursor-label-style")?.remove();
+      document.getElementById("dynamic-cursor-styles")?.remove();
     };
-  }, []);
+  }, []); 
 
   const handleLangChange = (l) => {
     socket.emit("lang-change", { roomId, lang: l, fileId: activeFileId });

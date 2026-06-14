@@ -1,8 +1,6 @@
 import { useEffect } from "react";
-import { CURSOR_COLORS, getUserColorIndex } from "../utils/cursorColors";
 import {
   createCursorDecoration,
-  injectCursorStyles,
   createCursorLabel,
   updateCursorLabelPosition,
 } from "../utils/cursorUtils";
@@ -12,20 +10,28 @@ export const useRemoteCursorRendering = ({
   cursorDecorations,
   socket,
   roomId,
+  activeFileId,
 }) => {
+  // ── 1. Clean up old cursor labels when file tab changes ───────────────
+  useEffect(() => {
+    // Monaco auto-destroys decorations when the model changes (file switch),
+    // so we only need to remove the floating label divs from DOM
+    document.querySelectorAll('[id^="label-"]').forEach((el) => el.remove());
+  }, [activeFileId]);
+
+  // ── 2. Listen for incoming cursor-move events ─────────────────────────
   useEffect(() => {
     socket.off("cursor-move");
 
-    socket.on("cursor-move", ({ userId, username, position }) => {
+    const handler = ({ userId, username, fileId, position }) => {
+      // 🎯 ONLY render cursors that belong to the ACTIVE file
+      if (fileId && activeFileId && fileId !== activeFileId) return;
       if (!editorRef.current || !window.monaco) return;
 
       const editor = editorRef.current;
       const monaco = window.monaco;
 
-      const colorIndex = getUserColorIndex(userId);
-      const color = CURSOR_COLORS[colorIndex];
-
-      // Remove old decorations
+      // Remove old decorations for this user
       if (cursorDecorations.current[userId]) {
         cursorDecorations.current[userId] = editor.deltaDecorations(
           cursorDecorations.current[userId],
@@ -33,23 +39,22 @@ export const useRemoteCursorRendering = ({
         );
       }
 
-      // Create cursor decoration
+      // Create cursor decoration (colored line in the editor)
       const decoration = createCursorDecoration(monaco, position, userId);
-      cursorDecorations.current[userId] = editor.deltaDecorations([], [decoration]);
+      cursorDecorations.current[userId] = editor.deltaDecorations(
+        [],
+        [decoration]
+      );
 
-      // Inject cursor styles
-      injectCursorStyles(userId, color);
-
-      // Create and position cursor label
-      const label = createCursorLabel(userId, username, color);
+      // Create and position floating label
+      const label = createCursorLabel(userId, username);
       updateCursorLabelPosition(label, editor, position);
-    });
+    };
 
-    console.log("hook running");
-    console.log(editorRef.current);
+    socket.on("cursor-move", handler);
 
     return () => {
-      socket.off("cursor-move");
+      socket.off("cursor-move", handler);
     };
-  }, [socket, editorRef, cursorDecorations, roomId]);
+  }, [roomId, activeFileId]);
 };
