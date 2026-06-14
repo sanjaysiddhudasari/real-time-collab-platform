@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { socket } from "../socket/socket";
+import {  useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import Navbar from "../components/dashboard/Navbar";

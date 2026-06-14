@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { socket } from "../socket/socket";
 import api from "../services/api";
@@ -9,15 +9,18 @@ import RoomNav from "../components/room/RoomNav";
 import OutputPanel from "../components/room/OutputPanel";
 import ChatSideBar from "../components/room/ChatSideBar";
 import FileTab from "../components/room/FileTab";
+import CreateFileModal from "../components/room/CreateFileModal";
 import { CURSOR_COLORS } from "../utils/cursorColors";
 import { useRoomSocket } from "../hooks/useRoomSocket";
+import useUser from "../hooks/useUser";
 
 export default function Room() {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const user = useMemo(() => JSON.parse(localStorage.getItem("user")), []);
+  const { user } = useUser();
 
   // ── State ────────────────────────────────────────────────────────────
+  const [isloading, setIsLoading] = useState(true);
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -29,6 +32,7 @@ export default function Room() {
   const [output, setOutput] = useState("");
   const [outputOpen, setOutputOpen] = useState(false);
   const [roomName, setRoomName] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const chatEndRef = useRef(null);
   const editorRef = useRef(null);
@@ -36,7 +40,7 @@ export default function Room() {
   const cursorDecorations = useRef({});
 
   const activeFile = files?.find(
-    (file) => file?._id?.toString() === activeFileId?.toString()
+    (file) => file?._id?.toString() === activeFileId?.toString(),
   );
 
   // ── Socket event handlers ────────────────────────────────────────────
@@ -51,6 +55,8 @@ export default function Room() {
     setOutputOpen,
     setOutput,
     setActiveFileId,
+    setIsLoading,
+    activeFileId,
     cursorDecorations,
     editorRef,
   });
@@ -73,9 +79,11 @@ export default function Room() {
             user?.userId?.toString(),
         }));
         setMessages(messages);
+        setIsLoading(false);
         if (data.files?.length > 0) setActiveFileId(data.files[0]._id);
       } catch (error) {
-        toast.error("Failed to load room");
+        toast.error("Failed to load room", error);
+        setIsLoading(false);
       }
     };
     fetchRoomData();
@@ -116,7 +124,7 @@ export default function Room() {
           pointer-events: none;
           white-space: nowrap;
         }
-      `
+      `,
     ).join("\n");
     document.head.appendChild(styleTag);
     return () => document.getElementById("dynamic-cursor-styles")?.remove();
@@ -128,6 +136,10 @@ export default function Room() {
   }, [messages]);
 
   // ── Event handlers ───────────────────────────────────────────────────
+  const handleCreateFile = ({ name, lang }) => {
+    socket.emit("create-file", { roomId, name, lang });
+  };
+
   const handleLangChange = (lang) => {
     socket.emit("lang-change", { roomId, lang, fileId: activeFileId });
   };
@@ -136,6 +148,10 @@ export default function Room() {
     if (!input.trim()) return;
     socket.emit("send-message", { roomId, content: input });
     setInput("");
+  };
+
+  const handleTyping=()=>{
+    socket.emit("typing",{roomId});
   };
 
   const handleRun = () => {
@@ -158,6 +174,13 @@ export default function Room() {
     navigate("/");
   };
 
+  if (isloading) {
+    return (
+      <div className="h-screen bg-[#0d0d12] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-zinc-700 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
   // ── Render ───────────────────────────────────────────────────────────
   return (
     <div className="h-screen bg-[#0d0d12] flex flex-col overflow-hidden font-mono">
@@ -181,6 +204,7 @@ export default function Room() {
             files={files}
             activeFileId={activeFileId}
             setActiveFileId={setActiveFileId}
+            onAddFile={() => setShowCreateModal(true)}
           />
 
           <MonacoEditor
@@ -210,9 +234,16 @@ export default function Room() {
             setInput={setInput}
             handleSend={handleSend}
             chatEndRef={chatEndRef}
+            onTyping={handleTyping}
           />
         )}
       </div>
+
+      <CreateFileModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreateFile}
+      />
     </div>
   );
 }

@@ -45,7 +45,7 @@ io.on("connection", (socket) => {
   // room 
 
   socket.on("join-room", async ({ roomId }) => {
-    const room = await Room.findOne({roomId:roomId});
+    const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("room-error", { message: "room not found" });
       return;
@@ -87,6 +87,7 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("room-data", roomData);
       console.log(socket.userId.toString(), userId);
       io.to(roomId).emit("user-joined", { username });
+      io.to(roomId).emit("user-online",{userId:socket.userId,username});
     } catch (error) {
       console.log(error);
       socket.emit("room-error", {
@@ -113,6 +114,7 @@ io.on("connection", (socket) => {
         userRooms.delete(uid);
       }
     }
+    io.to(roomId).emit("user-offline",{userId:socket.userId});
 
     socket.to(roomId).emit("user-left", { username, userId: socket.userId.toString() });
     try {
@@ -134,7 +136,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sync-code", async ({ roomId, code, fileId }) => {
-    console.log({roomId,code,fileId});
+    console.log({ roomId, code, fileId });
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("room-error", { message: "room not found" });
@@ -172,7 +174,7 @@ io.on("connection", (socket) => {
       file.lang = lang;
       await room.save();
     }
-    socket.to(roomId).emit("lang-change", { lang, fileId });
+    io.to(roomId).emit("lang-change", { lang, fileId });
   })
 
   socket.on("run-code", async ({ roomId, fileId }) => {
@@ -204,10 +206,21 @@ io.on("connection", (socket) => {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
     }
-    const user= await User.findById(socket.userId).select('username');
-    const username=user.username; 
+    const user = await User.findById(socket.userId).select('username');
+    const username = user.username;
     socket.to(roomId).emit("cursor-move", { userId: socket.userId.toString(), username, fileId, position });
   });
+
+  
+  socket.on("typing",async({roomId})=>{
+    const room=await Room.findOne({roomId:roomId});
+    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    if (!isPresent) {
+      socket.emit("room-error", { message: "unauthorized access" });
+      return;
+    };
+    socket.to(roomId).emit("user-typing",{userId:socket.userId.toString()});
+  })
 
 
   //messages
@@ -245,6 +258,25 @@ io.on("connection", (socket) => {
     }
   });
 
+
+  socket.on("create-file", async ({ roomId, name, lang }) => {
+    const room = await Room.findOne({ roomId: roomId });
+    if (!room) {
+      socket.emit("message-error", { message: "room not found" });
+      return;
+    };
+    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    if (!isPresent) {
+      socket.emit("room-error", { message: "unauthorized access" });
+      return;
+    };
+    room.files.push({ name, lang, code: "" });
+    await room.save();
+    const createdFile = room.files[room.files.length - 1];
+    io.to(roomId).emit("file-created", createdFile);
+  })
+
+
   socket.on("disconnect", async () => {
     console.log("User disconnected:", socket.id);
     const uid = socket.userId?.toString();
@@ -252,6 +284,7 @@ io.on("connection", (socket) => {
       const { rooms, username } = userRooms.get(uid);
       // Emit user-left to every room this user was in
       for (const roomId of rooms) {
+        io.to(roomId).emit("user-offline",{userId:uid});
         io.to(roomId).emit("user-left", { username, userId: uid });
       }
       userRooms.delete(uid);

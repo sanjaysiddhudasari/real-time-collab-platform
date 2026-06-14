@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { socket } from "../socket/socket";
 import toast from "react-hot-toast";
 
@@ -13,9 +13,12 @@ export const useRoomSocket = ({
   setOutputOpen,
   setOutput,
   setActiveFileId,
+  activeFileId,
+  setIsLoading,
   cursorDecorations,
   editorRef,
 }) => {
+  const typingTimeouts = useRef({});
   useEffect(() => {
     socket.emit("join-room", { roomId });
 
@@ -35,11 +38,12 @@ export const useRoomSocket = ({
       setMessages(messages);
       const files = data.files || [];
       setFiles(files);
-      if (files.length > 0) {
+      if (files.length > 0 && activeFileId === null) {
         setActiveFileId(files[0]._id);
       }
-      setUsers(participants);
+      setUsers(participants.map((u) => ({ ...u, active: true })));
       setRoomName(roomname);
+      setIsLoading(false);
     });
 
     // ── Room errors ─────────────────────────────────────────────────────
@@ -53,8 +57,8 @@ export const useRoomSocket = ({
         prev.map((file) =>
           file?._id?.toString() === fileId?.toString()
             ? { ...file, code }
-            : file
-        )
+            : file,
+        ),
       );
     });
 
@@ -93,7 +97,7 @@ export const useRoomSocket = ({
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 ml-1 shrink-0" />
           </div>
         ),
-        { duration: 3000 }
+        { duration: 3000 },
       );
     });
 
@@ -127,7 +131,7 @@ export const useRoomSocket = ({
             <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 ml-1 shrink-0" />
           </div>
         ),
-        { duration: 3000 }
+        { duration: 3000 },
       );
 
       // Clean up cursor label + decoration for the leaving user
@@ -137,7 +141,7 @@ export const useRoomSocket = ({
       if (cursorDecorations.current[userId] && editorRef.current) {
         cursorDecorations.current[userId] = editorRef.current.deltaDecorations(
           cursorDecorations.current[userId],
-          []
+          [],
         );
         delete cursorDecorations.current[userId];
       }
@@ -149,8 +153,8 @@ export const useRoomSocket = ({
         prev.map((file) =>
           file?._id?.toString() === fileId?.toString()
             ? { ...file, lang }
-            : file
-        )
+            : file,
+        ),
       );
     });
 
@@ -168,6 +172,49 @@ export const useRoomSocket = ({
       setMessages((prev) => [...prev, formattedMsg]);
     });
 
+    socket.on("file-created", (newFile) => {
+      setFiles((prev) => [...prev, newFile]);
+      setActiveFileId(newFile._id);
+    });
+
+    socket.on("user-online", ({ userId, username }) => {
+      console.log(username);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id.toString() === userId.toString() ? { ...u, active: true } : u,
+        ),
+      );
+    });
+
+    socket.on("user-offline", ({ userId }) => {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id.toString() === userId.toString() ? { ...u, active: false } : u,
+        ),
+      );
+    });
+
+    socket.on("user-typing", ({ userId }) => {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id.toString() === userId.toString() ? { ...u, typing: true } : u,
+        ),
+      );
+      if (typingTimeouts.current[userId]) {
+        clearTimeout(typingTimeouts.current[userId]);
+      }
+      typingTimeouts.current[userId] = setTimeout(() => {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u._id.toString() === userId.toString()
+              ? { ...u, typing: false }
+              : u,
+          ),
+        );
+        delete typingTimeouts.current[userId];
+      },2000);
+    });
+
     // ── Cleanup on unmount / room change ────────────────────────────────
     return () => {
       socket.emit("leave-room", { roomId });
@@ -180,7 +227,11 @@ export const useRoomSocket = ({
       socket.off("user-left");
       socket.off("lang-change");
       socket.off("new-message");
+      socket.off("file-created");
       socket.off("cursor-move");
+      socket.off("user-typing");
+      socket.off("user-offline");
+      socket.off("user-online");
 
       document.querySelectorAll('[id^="label-"]').forEach((el) => el.remove());
       cursorDecorations.current = {};

@@ -8,6 +8,7 @@ function ChatSideBar({
   setInput,
   handleSend,
   chatEndRef,
+  onTyping,
 }) {
   return (
     <div className="w-72 bg-zinc-950 border-l border-zinc-800/70 flex flex-col shrink-0">
@@ -48,6 +49,11 @@ function ChatSideBar({
               <span className="text-zinc-400 text-xs truncate">
                 {u?.username}
               </span>
+              {u?.typing && (
+                <span className="text-[10px] text-yellow-400 ml-1 animate-pulse">
+                  typing...
+                </span>
+              )}
               <span
                 className={`ml-auto w-1.5 h-1.5 rounded-full shrink-0 ${u?.active ? "bg-green-400" : "bg-zinc-700"}`}
               />
@@ -110,7 +116,10 @@ function ChatSideBar({
             rows={1}
             placeholder="Message the room…"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              if (e.target.value.trim()) onTyping?.();
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
