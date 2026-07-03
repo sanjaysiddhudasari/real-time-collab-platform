@@ -1,4 +1,4 @@
-import {  useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import Navbar from "../components/dashboard/Navbar";
@@ -13,6 +13,19 @@ import useUser from "../hooks/useUser";
 export default function Dashboard() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("googleLogin") === "true") {
+      const user = {
+        userId: params.get("userId"),
+        username: params.get("username"),
+      };
+      localStorage.setItem("user", JSON.stringify(user));
+      // Clean URL (remove query params)
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
+
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [newRoom, setNewRoom] = useState({
@@ -23,17 +36,13 @@ export default function Dashboard() {
   const [joining, setJoining] = useState(null);
   const [tab, setTab] = useState("all"); // all | mine
 
-  
-
   //custom hooks
 
-  const {user}=useUser();
-  
+  const { user } = useUser();
+
   const [connected, socketId] = useSocketStatus();
 
-  const [rooms, loading, userId, error,fetchRooms] = useRooms();
-
-
+  const [rooms, loading, userId, error, fetchRooms] = useRooms();
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleJoin = async (room) => {
@@ -50,7 +59,7 @@ export default function Dashboard() {
 
   const handleCreate = async () => {
     if (!newRoom.roomname.trim()) return;
-    const response =await api.post("/rooms", newRoom);
+    const response = await api.post("/rooms", newRoom);
     await fetchRooms();
     setNewRoom({ roomname: "", language: "javascript", visibility: "" });
     setShowModal(false);
