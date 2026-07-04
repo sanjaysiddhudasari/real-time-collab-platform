@@ -10,6 +10,7 @@ import OutputPanel from "../components/room/OutputPanel";
 import ChatSideBar from "../components/room/ChatSideBar";
 import FileTab from "../components/room/FileTab";
 import CreateFileModal from "../components/room/CreateFileModal";
+import RenameFileModal from "../components/room/RenameFileModal";
 import { CURSOR_COLORS } from "../utils/cursorColors";
 import { useRoomSocket } from "../hooks/useRoomSocket";
 import useUser from "../hooks/useUser";
@@ -33,11 +34,13 @@ export default function Room() {
   const [outputOpen, setOutputOpen] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [renameTarget, setRenameTarget] = useState(null);
 
   const chatEndRef = useRef(null);
   const editorRef = useRef(null);
   const isRemoteChange = useRef(false);
   const cursorDecorations = useRef({});
+  const lastRemoteCodeRef = useRef(null);
 
   const activeFile = files?.find(
     (file) => file?._id?.toString() === activeFileId?.toString(),
@@ -59,6 +62,8 @@ export default function Room() {
     activeFileId,
     cursorDecorations,
     editorRef,
+    isRemoteChange,
+    lastRemoteCodeRef,
   });
 
   // ── Initial room data fetch ──────────────────────────────────────────
@@ -140,6 +145,10 @@ export default function Room() {
     socket.emit("create-file", { roomId, name, lang });
   };
 
+  const handleRenameFile = (fileId, newName) => {
+    socket.emit("rename-file", { roomId, fileId, name: newName });
+  };
+
   const handleLangChange = (lang) => {
     socket.emit("lang-change", { roomId, lang, fileId: activeFileId });
   };
@@ -150,8 +159,8 @@ export default function Room() {
     setInput("");
   };
 
-  const handleTyping=()=>{
-    socket.emit("typing",{roomId});
+  const handleTyping = () => {
+    socket.emit("typing", { roomId });
   };
 
   const handleRun = () => {
@@ -181,6 +190,7 @@ export default function Room() {
       </div>
     );
   }
+
   // ── Render ───────────────────────────────────────────────────────────
   return (
     <div className="h-screen bg-[#0d0d12] flex flex-col overflow-hidden font-mono">
@@ -205,6 +215,7 @@ export default function Room() {
             activeFileId={activeFileId}
             setActiveFileId={setActiveFileId}
             onAddFile={() => setShowCreateModal(true)}
+            onRenameFile={(fileId) => setRenameTarget(fileId)}
           />
 
           <MonacoEditor
@@ -215,6 +226,7 @@ export default function Room() {
             editorRef={editorRef}
             cursorDecorations={cursorDecorations}
             isRemoteChange={isRemoteChange}
+            lastRemoteCodeRef={lastRemoteCodeRef}
           />
 
           {outputOpen && (
@@ -244,6 +256,17 @@ export default function Room() {
         onClose={() => setShowCreateModal(false)}
         onCreate={handleCreateFile}
       />
+
+      {renameTarget && (
+        <RenameFileModal
+          file={files.find((f) => f._id === renameTarget)}
+          onClose={() => setRenameTarget(null)}
+          onRename={(newName) => {
+            handleRenameFile(renameTarget, newName);
+            setRenameTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }

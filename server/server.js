@@ -41,16 +41,23 @@ const userRooms = new Map(); // userId → { rooms: Set<roomId>, username: strin
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
+  // Safe userId accessor — returns null if socket not authenticated
+  const getUserId = () => socket.userId?.toString() || null;
 
   // room 
 
   socket.on("join-room", async ({ roomId }) => {
+    const uid = getUserId();
+    if (!uid) {
+      socket.emit("room-error", { message: "unauthorized" });
+      return;
+    }
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("room-error", { message: "room not found" });
       return;
     }
-    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    const isPresent = room.participants.find(u => u._id.toString() === uid);
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
@@ -58,14 +65,12 @@ io.on("connection", (socket) => {
     socket.join(roomId);
 
     // Track this user's room membership
-    const uid = socket.userId.toString();
     if (!userRooms.has(uid)) {
       userRooms.set(uid, { rooms: new Set(), username: '' });
     }
     userRooms.get(uid).rooms.add(roomId);
 
-    const userId = socket.userId.toString();
-    const username = await User.findById(userId).then(u => u.username).catch(e => null);
+    const username = await User.findById(uid).then(u => u.username).catch(e => null);
     // Cache username for disconnect use
     if (userRooms.has(uid)) {
       userRooms.get(uid).username = username || 'Unknown';
@@ -85,9 +90,8 @@ io.on("connection", (socket) => {
       }
       console.log(roomData);
       io.to(roomId).emit("room-data", roomData);
-      console.log(socket.userId.toString(), userId);
-      io.to(roomId).emit("user-joined", { username });
-      io.to(roomId).emit("user-online",{userId:socket.userId,username});
+      io.to(roomId).emit("user-joined", { username, userId: uid });
+      io.to(roomId).emit("user-online",{userId:uid, username});
     } catch (error) {
       console.log(error);
       socket.emit("room-error", {
@@ -98,7 +102,9 @@ io.on("connection", (socket) => {
 
 
   socket.on("leave-room", async ({ roomId }) => {
-    const user = await User.findById(socket.userId.toString());
+    const uid = getUserId();
+    if (!uid) return;
+    const user = await User.findById(uid);
     if (!user) {
       socket.emit("room-error", { message: "server-error" });
       return;
@@ -107,16 +113,14 @@ io.on("connection", (socket) => {
     socket.leave(roomId);
 
     // Clean up room tracking
-    const uid = socket.userId.toString();
     if (userRooms.has(uid)) {
       userRooms.get(uid).rooms.delete(roomId);
       if (userRooms.get(uid).rooms.size === 0) {
         userRooms.delete(uid);
       }
     }
-    io.to(roomId).emit("user-offline",{userId:socket.userId});
-
-    socket.to(roomId).emit("user-left", { username, userId: socket.userId.toString() });
+    io.to(roomId).emit("user-offline",{userId: uid});
+    socket.to(roomId).emit("user-left", { username, userId: uid });
     try {
       const roomData = await Room.findOne({ roomId: roomId }).populate([
         { path: "participants", select: "username" },
@@ -136,13 +140,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sync-code", async ({ roomId, code, fileId }) => {
+    const uid = getUserId();
+    if (!uid) return;
     console.log({ roomId, code, fileId });
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("room-error", { message: "room not found" });
       return;
     }
-    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    const isPresent = room.participants.find(u => u._id.toString() === getUserId());
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
@@ -158,12 +164,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("lang-change", async ({ roomId, lang, fileId }) => {
+    const uid = getUserId();
+    if (!uid) return;
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("room-error", { message: "room not found" });
       return;
     }
-    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    const isPresent = room.participants.find(u => u._id.toString() === getUserId());
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
@@ -196,56 +204,62 @@ io.on("connection", (socket) => {
   // cursor styles 
 
   socket.on("cursor-move", async ({ roomId, fileId, position }) => {
+    const uid = getUserId();
+    if (!uid) return;
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("room-error", { message: "room not found" });
       return;
     }
-    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    const isPresent = room.participants.find(u => u._id.toString() === getUserId());
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
     }
     const user = await User.findById(socket.userId).select('username');
     const username = user.username;
-    socket.to(roomId).emit("cursor-move", { userId: socket.userId.toString(), username, fileId, position });
+    socket.to(roomId).emit("cursor-move", { userId: getUserId(), username, fileId, position });
   });
 
   
   socket.on("typing",async({roomId})=>{
+    const uid = getUserId();
+    if (!uid) return;
     const room=await Room.findOne({roomId:roomId});
-    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    const isPresent = room.participants.find(u => u._id.toString() === getUserId());
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
     };
-    socket.to(roomId).emit("user-typing",{userId:socket.userId.toString()});
+    socket.to(roomId).emit("user-typing",{userId:getUserId()});
   })
 
 
   //messages
 
   socket.on("send-message", async ({ roomId, content }) => {
+    const uid = getUserId();
+    if (!uid) return;
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("message-error", { message: "room not found" });
       return;
     }
-    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    const isPresent = room.participants.find(u => u._id.toString() === getUserId());
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
     };
     try {
-      const user = await User.findById(socket.userId.toString());
+      const user = await User.findById(getUserId());
       if (!user) {
         socket.emit("message-error", { message: "user not found" });
         return;
       }
-      console.log({ roomId, userId: socket.userId.toString(), content });
+      console.log({ roomId, userId: getUserId(), content });
       const message = await Message.create({
         roomId,
-        sender: socket.userId.toString(),
+        sender: getUserId(),
         content: content
       });
       room.messages.push(message._id);
@@ -260,12 +274,14 @@ io.on("connection", (socket) => {
 
 
   socket.on("create-file", async ({ roomId, name, lang }) => {
+    const uid = getUserId();
+    if (!uid) return;
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("message-error", { message: "room not found" });
       return;
     };
-    const isPresent = room.participants.find(u => u._id.toString() === socket.userId.toString());
+    const isPresent = room.participants.find(u => u._id.toString() === getUserId());
     if (!isPresent) {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
@@ -274,6 +290,22 @@ io.on("connection", (socket) => {
     await room.save();
     const createdFile = room.files[room.files.length - 1];
     io.to(roomId).emit("file-created", createdFile);
+  })
+
+  socket.on("rename-file", async ({ roomId, fileId, name }) => {
+    const uid = getUserId();
+    if (!uid) return;
+    const room = await Room.findOne({ roomId: roomId });
+    if (!room) {
+      socket.emit("room-error", { message: "room not found" });
+      return;
+    };
+    const file = room.files.find(f => f._id.toString() === fileId.toString());
+    if (file) {
+      file.name = name;
+      await room.save();
+    }
+    io.to(roomId).emit("file-renamed", { fileId, name });
   })
 
 

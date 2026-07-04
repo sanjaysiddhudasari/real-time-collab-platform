@@ -40,6 +40,9 @@ function RoomCard({ rooms, userId, onJoin, onDelete, joining, tab, search }) {
                           Owner
                         </span>
                       )}
+                      <span className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${room.isPublic ? "text-green-500 border border-green-500/30" : "text-violet-400 border border-violet-500/30"}`}>
+                        {room.isPublic ? "🌍 Public" : "🔒 Private"}
+                      </span>
                     </div>
                     <h3 className="text-sm font-semibold text-white truncate">
                       {room.roomname}

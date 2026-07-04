@@ -17,8 +17,11 @@ export const useRoomSocket = ({
   setIsLoading,
   cursorDecorations,
   editorRef,
+  isRemoteChange,
+  lastRemoteCodeRef,
 }) => {
   const typingTimeouts = useRef({});
+
   useEffect(() => {
     socket.emit("join-room", { roomId });
 
@@ -51,13 +54,24 @@ export const useRoomSocket = ({
       console.log(message);
     });
 
-    // ── Code sync ───────────────────────────────────────────────────────
+    // ── Code sync (FIXED: use lastRemoteCodeRef to prevent echo loops) ──
     socket.on("receive-code", ({ code, fileId }) => {
+      // Store this code so MonacoEditor's onChange can skip re-emitting it
+      if (lastRemoteCodeRef) lastRemoteCodeRef.current = code;
       setFiles((prev) =>
         prev.map((file) =>
           file?._id?.toString() === fileId?.toString()
             ? { ...file, code }
             : file,
+        ),
+      );
+    });
+
+    // ── File rename ─────────────────────────────────────────────────────
+    socket.on("file-renamed", ({ fileId, name }) => {
+      setFiles((prev) =>
+        prev.map((f) =>
+          f._id.toString() === fileId.toString() ? { ...f, name } : f,
         ),
       );
     });
@@ -79,7 +93,7 @@ export const useRoomSocket = ({
     });
 
     // ── User presence ───────────────────────────────────────────────────
-    socket.on("user-joined", ({ username }) => {
+    socket.on("user-joined", ({ username, userId }) => {
       toast.custom(
         (t) => (
           <div
@@ -99,6 +113,17 @@ export const useRoomSocket = ({
         ),
         { duration: 3000 },
       );
+      // Add user to list if not already present
+      setUsers((prev) => {
+        if (prev.some((u) => u._id.toString() === userId?.toString())) {
+          return prev.map((u) =>
+            u._id.toString() === userId?.toString()
+              ? { ...u, active: true }
+              : u,
+          );
+        }
+        return [...prev, { _id: userId, username, active: true }];
+      });
     });
 
     socket.on("user-left", ({ username, userId }) => {
@@ -132,6 +157,15 @@ export const useRoomSocket = ({
           </div>
         ),
         { duration: 3000 },
+      );
+
+      // Mark user as offline (don't remove — keeps their messages in chat)
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id.toString() === userId.toString()
+            ? { ...u, active: false }
+            : u,
+        ),
       );
 
       // Clean up cursor label + decoration for the leaving user
@@ -172,13 +206,14 @@ export const useRoomSocket = ({
       setMessages((prev) => [...prev, formattedMsg]);
     });
 
+    // ── File created by someone in the room ────────────────────────────
     socket.on("file-created", (newFile) => {
       setFiles((prev) => [...prev, newFile]);
       setActiveFileId(newFile._id);
     });
 
+    // ── Online / Offline ────────────────────────────────────────────────
     socket.on("user-online", ({ userId, username }) => {
-      console.log(username);
       setUsers((prev) =>
         prev.map((u) =>
           u._id.toString() === userId.toString() ? { ...u, active: true } : u,
@@ -189,15 +224,20 @@ export const useRoomSocket = ({
     socket.on("user-offline", ({ userId }) => {
       setUsers((prev) =>
         prev.map((u) =>
-          u._id.toString() === userId.toString() ? { ...u, active: false } : u,
+          u._id.toString() === userId.toString()
+            ? { ...u, active: false }
+            : u,
         ),
       );
     });
 
+    // ── Typing indicator ────────────────────────────────────────────────
     socket.on("user-typing", ({ userId }) => {
       setUsers((prev) =>
         prev.map((u) =>
-          u._id.toString() === userId.toString() ? { ...u, typing: true } : u,
+          u._id.toString() === userId.toString()
+            ? { ...u, typing: true }
+            : u,
         ),
       );
       if (typingTimeouts.current[userId]) {
@@ -212,7 +252,7 @@ export const useRoomSocket = ({
           ),
         );
         delete typingTimeouts.current[userId];
-      },2000);
+      }, 2000);
     });
 
     // ── Cleanup on unmount / room change ────────────────────────────────
@@ -228,6 +268,7 @@ export const useRoomSocket = ({
       socket.off("lang-change");
       socket.off("new-message");
       socket.off("file-created");
+      socket.off("file-renamed");
       socket.off("cursor-move");
       socket.off("user-typing");
       socket.off("user-offline");

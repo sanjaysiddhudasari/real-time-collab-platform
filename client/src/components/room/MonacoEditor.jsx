@@ -13,11 +13,10 @@ function MonacoEditor({
   editorRef,
   cursorDecorations,
   isRemoteChange,
+  lastRemoteCodeRef,
 }) {
-  // Use a ref-based cursor tracking so the editor listener doesn't get stale
   const { handleCursorMove } = useCursorTracking({ roomId, socket, activeFileId });
 
-  // Render remote cursors only for the active file
   useRemoteCursorRendering({
     editorRef,
     cursorDecorations,
@@ -27,7 +26,7 @@ function MonacoEditor({
   });
 
   const activeFile = files?.find(
-    (file) => file._id.toString() === activeFileId.toString()
+    (file) => file._id.toString() === activeFileId.toString(),
   );
 
   return (
@@ -43,19 +42,26 @@ function MonacoEditor({
           configureTypeScript(monaco);
         }}
         onChange={(value) => {
-          if (isRemoteChange.current) return;
+          // Skip if this value was just received from remote
+          if (lastRemoteCodeRef?.current !== null) {
+            if (value === lastRemoteCodeRef.current) {
+              lastRemoteCodeRef.current = null;
+              return;
+            }
+            lastRemoteCodeRef.current = null;
+          }
+
           const activeFile = files?.find(
-            (file) => file._id.toString() === activeFileId.toString()
+            (file) => file._id.toString() === activeFileId.toString(),
           );
           if (!activeFile) return;
-          setFiles((prev) => {
-            return prev.map((file) =>
+          setFiles((prev) =>
+            prev.map((file) =>
               file._id.toString() === activeFileId.toString()
                 ? { ...file, code: value }
-                : file
-            );
-          });
-          console.log({ roomId, value, activeFileId });
+                : file,
+            ),
+          );
           socket.emit("sync-code", {
             roomId,
             code: value,

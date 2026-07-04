@@ -1,10 +1,12 @@
-function FileTab({ files, activeFileId, setActiveFileId, onAddFile }) {
+function FileTab({ files, activeFileId, setActiveFileId, onAddFile, onRenameFile }) {
   return (
     <div className="h-9 bg-zinc-950 border-b border-zinc-800/50 flex items-end px-3 gap-0.5 shrink-0">
       {files?.map((file) => (
         <div
           key={file._id}
           onClick={() => setActiveFileId(file._id)}
+          onDoubleClick={() => onRenameFile?.(file._id)}
+          title="Double-click to rename"
           className={
             file._id.toString() === activeFileId.toString()
               ? "flex items-center gap-2 bg-[#0d0d12] border border-zinc-800/70 border-b-0 rounded-t-md px-3 py-1.5 text-xs text-zinc-300 cursor-pointer"
@@ -23,7 +25,6 @@ function FileTab({ files, activeFileId, setActiveFileId, onAddFile }) {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
           </svg>
-
           {file.name}
         </div>
       ))}
