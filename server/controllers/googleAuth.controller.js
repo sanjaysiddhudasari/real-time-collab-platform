@@ -7,6 +7,10 @@ dotenv.config()
 
 const generateTokenAndSetCookies = require("../utils/generateToken");
 
+const getClientUrl = (req) => {
+  return req.headers.origin || process.env.CLIENT_URL || "http://localhost:5173";
+};
+
 const googleAuth = (req, res) => {
   const redirectUri = process.env.GOOGLE_CALLBACK_URL;
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -26,9 +30,10 @@ const googleAuth = (req, res) => {
 const googleCallback = async (req, res) => {
   try {
     const { code } = req.query;
+    const clientUrl = getClientUrl(req);
 
     if (!code) {
-      return res.redirect("http://localhost:5173/login?error=google_auth_failed");
+      return res.redirect(`${clientUrl}/login?error=google_auth_failed`);
     }
 
     // 1. Exchange authorization code for tokens
@@ -54,7 +59,7 @@ const googleCallback = async (req, res) => {
     const { id, email, name } = profileResponse.data;
 
     if (!email) {
-      return res.redirect("http://localhost:5173/login?error=no_email");
+      return res.redirect(`${clientUrl}/login?error=no_email`);
     }
 
     // 3. Find existing user by email, or create a new one
@@ -65,7 +70,6 @@ const googleCallback = async (req, res) => {
         ? name.replace(/\s+/g, "_").toLowerCase()
         : email.split("@")[0];
 
-      // Make sure username is unique
       let finalUsername = username;
       let counter = 1;
       while (await User.findOne({ username: finalUsername })) {
@@ -88,13 +92,14 @@ const googleCallback = async (req, res) => {
     // 4. Generate JWT and set cookie
     generateTokenAndSetCookies(user._id, res);
 
-    // 5. Redirect back to frontend
+    // 5. Redirect back to frontend with dynamic client URL
     res.redirect(
-      `http://localhost:5173/?googleLogin=true&userId=${user._id}&username=${user.username}`
+      `${clientUrl}/?googleLogin=true&userId=${user._id}&username=${user.username}`
     );
   } catch (error) {
     console.error("Google auth error:", error);
-    res.redirect("http://localhost:5173/login?error=google_server_error");
+    const clientUrl = getClientUrl(req);
+    res.redirect(`${clientUrl}/login?error=google_server_error`);
   }
 };
 
