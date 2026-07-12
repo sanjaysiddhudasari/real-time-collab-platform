@@ -15,12 +15,13 @@ export const useRoomSocket = ({
   setActiveFileId,
   activeFileId,
   setIsLoading,
-  cursorDecorations,
   editorRef,
-  isRemoteChange,
-  lastRemoteCodeRef,
+  removeCursorRef,
+  lastSyncedRef,
+  setInviteCode,
 }) => {
   const typingTimeouts = useRef({});
+  const initialized = useRef(false);
 
   useEffect(() => {
     socket.emit("join-room", { roomId });
@@ -41,12 +42,14 @@ export const useRoomSocket = ({
       setMessages(messages);
       const files = data.files || [];
       setFiles(files);
-      if (files.length > 0 && activeFileId === null) {
+      if (files.length > 0 && !initialized.current) {
         setActiveFileId(files[0]._id);
+        initialized.current = true;
       }
       setUsers(participants.map((u) => ({ ...u, active: true })));
       setRoomName(roomname);
       setIsLoading(false);
+      if (data.inviteCode) setInviteCode(data.inviteCode);
     });
 
     // ── Room errors ─────────────────────────────────────────────────────
@@ -54,10 +57,9 @@ export const useRoomSocket = ({
       console.log(message);
     });
 
-    // ── Code sync (FIXED: use lastRemoteCodeRef to prevent echo loops) ──
+    // ── Code sync ─────────────────────────────────────────────────
     socket.on("receive-code", ({ code, fileId }) => {
-      // Store this code so MonacoEditor's onChange can skip re-emitting it
-      if (lastRemoteCodeRef) lastRemoteCodeRef.current = code;
+      if (lastSyncedRef) lastSyncedRef.current = code;
       setFiles((prev) =>
         prev.map((file) =>
           file?._id?.toString() === fileId?.toString()
@@ -169,16 +171,7 @@ export const useRoomSocket = ({
       );
 
       // Clean up cursor label + decoration for the leaving user
-      const label = document.getElementById(`label-${userId}`);
-      if (label) label.remove();
-
-      if (cursorDecorations.current[userId] && editorRef.current) {
-        cursorDecorations.current[userId] = editorRef.current.deltaDecorations(
-          cursorDecorations.current[userId],
-          [],
-        );
-        delete cursorDecorations.current[userId];
-      }
+      removeCursorRef?.current?.(userId);
     });
 
     // ── Language change ─────────────────────────────────────────────────
@@ -210,6 +203,16 @@ export const useRoomSocket = ({
     socket.on("file-created", (newFile) => {
       setFiles((prev) => [...prev, newFile]);
       setActiveFileId(newFile._id);
+    });
+
+    socket.on("file-deleted", ({ fileId }) => {
+      setFiles((prev) => {
+        const next = prev.filter((f) => f._id.toString() !== fileId.toString());
+        if (activeFileId?.toString() === fileId.toString() && next.length > 0) {
+          setActiveFileId(next[0]._id);
+        }
+        return next;
+      });
     });
 
     // ── Online / Offline ────────────────────────────────────────────────
@@ -268,6 +271,7 @@ export const useRoomSocket = ({
       socket.off("lang-change");
       socket.off("new-message");
       socket.off("file-created");
+      socket.off("file-deleted");
       socket.off("file-renamed");
       socket.off("cursor-move");
       socket.off("user-typing");
@@ -275,7 +279,6 @@ export const useRoomSocket = ({
       socket.off("user-online");
 
       document.querySelectorAll('[id^="label-"]').forEach((el) => el.remove());
-      cursorDecorations.current = {};
     };
   }, [roomId]);
 };

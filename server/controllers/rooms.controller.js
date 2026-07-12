@@ -139,4 +139,23 @@ const runCode=async(req,res)=>{
     }
 }
 
-module.exports={createRoom,getRoomById,joinRoom,leaveRoom,getAllRooms,deleteRoom,runCode};
+const joinByInvite=async(req,res)=>{
+    try{
+        const {code}=req.params;
+        const userId=req.userId;
+        const room=await Room.findOne({inviteCode:code});
+        if(!room){
+            return res.status(404).json({message:'Invalid invite link'});
+        }
+        if(!room.participants.some(p=>p.toString()===userId.toString())){
+            room.participants.push(userId);
+            await room.save();
+        }
+        res.status(200).json({message:'Joined room',roomId:room.roomId});
+    }catch(error){
+        console.error('Error joining by invite:',error);
+        res.status(500).json({message:'Server error'});
+    }
+}
+
+module.exports={createRoom,getRoomById,joinRoom,leaveRoom,getAllRooms,deleteRoom,runCode,joinByInvite};

@@ -186,6 +186,8 @@ io.on("connection", (socket) => {
   })
 
   socket.on("run-code", async ({ roomId, fileId }) => {
+    const uid = getUserId();
+    if (!uid) return;
     const room = await Room.findOne({ roomId: roomId });
     if (!room) {
       socket.emit("room-error", { message: "room not found" });
@@ -308,6 +310,19 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("file-renamed", { fileId, name });
   })
 
+  socket.on("delete-file", async ({ roomId, fileId }) => {
+    const uid = getUserId();
+    if (!uid) return;
+    const room = await Room.findOne({ roomId });
+    if (!room) return;
+    room.files = room.files.filter((f) => f._id.toString() !== fileId.toString());
+    await room.save();
+    io.to(roomId).emit("file-deleted", { fileId });
+  })
+
+  socket.on("cursor-update", (data) => {
+    socket.to(data.roomId).emit("cursor-update", data);
+});
 
   socket.on("disconnect", async () => {
     console.log("User disconnected:", socket.id);

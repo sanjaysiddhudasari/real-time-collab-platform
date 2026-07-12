@@ -20,7 +20,6 @@ export default function Room() {
   const navigate = useNavigate();
   const { user } = useUser();
 
-  // ── State ────────────────────────────────────────────────────────────
   const [isloading, setIsLoading] = useState(true);
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
@@ -33,20 +32,19 @@ export default function Room() {
   const [output, setOutput] = useState("");
   const [outputOpen, setOutputOpen] = useState(false);
   const [roomName, setRoomName] = useState("");
+  const [inviteCode, setInviteCode] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [renameTarget, setRenameTarget] = useState(null);
 
   const chatEndRef = useRef(null);
   const editorRef = useRef(null);
-  const isRemoteChange = useRef(false);
-  const cursorDecorations = useRef({});
-  const lastRemoteCodeRef = useRef(null);
+  const removeCursorRef = useRef(null);   // set by useCursors, used by useRoomSocket
+  const lastSyncedRef = useRef(null);     // set by useRoomSocket, checked by MonacoEditor
 
   const activeFile = files?.find(
     (file) => file?._id?.toString() === activeFileId?.toString(),
   );
 
-  // ── Socket event handlers ────────────────────────────────────────────
   useRoomSocket({
     roomId,
     user,
@@ -60,13 +58,12 @@ export default function Room() {
     setActiveFileId,
     setIsLoading,
     activeFileId,
-    cursorDecorations,
     editorRef,
-    isRemoteChange,
-    lastRemoteCodeRef,
+    removeCursorRef,
+    lastSyncedRef,
+    setInviteCode,
   });
 
-  // ── Initial room data fetch ──────────────────────────────────────────
   useEffect(() => {
     const fetchRoomData = async () => {
       try {
@@ -94,7 +91,6 @@ export default function Room() {
     fetchRoomData();
   }, [roomId]);
 
-  // ── Inject cursor CSS styles ─────────────────────────────────────────
   useEffect(() => {
     const styleTag = document.createElement("style");
     styleTag.id = "dynamic-cursor-styles";
@@ -135,12 +131,10 @@ export default function Room() {
     return () => document.getElementById("dynamic-cursor-styles")?.remove();
   }, []);
 
-  // ── Auto-scroll chat on new messages ─────────────────────────────────
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Event handlers ───────────────────────────────────────────────────
   const handleCreateFile = ({ name, lang }) => {
     socket.emit("create-file", { roomId, name, lang });
   };
@@ -168,7 +162,10 @@ export default function Room() {
   };
 
   const handleCopyInvite = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`);
+    const link = inviteCode
+      ? `${window.location.origin}/invite/${inviteCode}`
+      : `${window.location.origin}/room/${roomId}`;
+    navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -191,7 +188,6 @@ export default function Room() {
     );
   }
 
-  // ── Render ───────────────────────────────────────────────────────────
   return (
     <div className="h-screen bg-[#0d0d12] flex flex-col overflow-hidden font-mono">
       <RoomNav
@@ -216,6 +212,7 @@ export default function Room() {
             setActiveFileId={setActiveFileId}
             onAddFile={() => setShowCreateModal(true)}
             onRenameFile={(fileId) => setRenameTarget(fileId)}
+            onDeleteFile={(fileId) => socket.emit("delete-file", { roomId, fileId })}
           />
 
           <MonacoEditor
@@ -224,9 +221,8 @@ export default function Room() {
             setFiles={setFiles}
             roomId={roomId}
             editorRef={editorRef}
-            cursorDecorations={cursorDecorations}
-            isRemoteChange={isRemoteChange}
-            lastRemoteCodeRef={lastRemoteCodeRef}
+            removeCursorRef={removeCursorRef}
+            lastSyncedRef={lastSyncedRef}
           />
 
           {outputOpen && (

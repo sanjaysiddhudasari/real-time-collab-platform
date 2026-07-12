@@ -1,9 +1,7 @@
 import Editor from "@monaco-editor/react";
 import { EDITOR_OPTIONS, configureTypeScript } from "../../utils/editorOptions";
 import { socket } from "../../socket/socket";
-import { useCursorTracking } from "../../hooks/useCursorTracking";
-import { useRemoteCursorRendering } from "../../hooks/useRemoteCursorRendering";
-import { useRef } from "react";
+import { useCursors } from "../../hooks/useCursors";
 
 function MonacoEditor({
   activeFileId,
@@ -11,19 +9,10 @@ function MonacoEditor({
   setFiles,
   roomId,
   editorRef,
-  cursorDecorations,
-  isRemoteChange,
-  lastRemoteCodeRef,
+  removeCursorRef,
+  lastSyncedRef,
 }) {
-  const { handleCursorMove } = useCursorTracking({ roomId, socket, activeFileId });
-
-  useRemoteCursorRendering({
-    editorRef,
-    cursorDecorations,
-    socket,
-    roomId,
-    activeFileId,
-  });
+  const { handleCursorMove } = useCursors({ editorRef, roomId, activeFileId, socket, removeCursorRef });
 
   const activeFile = files?.find(
     (file) => file._id.toString() === activeFileId.toString(),
@@ -42,19 +31,14 @@ function MonacoEditor({
           configureTypeScript(monaco);
         }}
         onChange={(value) => {
-          // Skip if this value was just received from remote
-          if (lastRemoteCodeRef?.current !== null) {
-            if (value === lastRemoteCodeRef.current) {
-              lastRemoteCodeRef.current = null;
-              return;
-            }
-            lastRemoteCodeRef.current = null;
+          if (lastSyncedRef?.current === value) {
+            lastSyncedRef.current = null;
+            return;
           }
-
-          const activeFile = files?.find(
+          const f = files?.find(
             (file) => file._id.toString() === activeFileId.toString(),
           );
-          if (!activeFile) return;
+          if (!f) return;
           setFiles((prev) =>
             prev.map((file) =>
               file._id.toString() === activeFileId.toString()

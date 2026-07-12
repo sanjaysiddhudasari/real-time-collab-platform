@@ -1,4 +1,4 @@
-function FileTab({ files, activeFileId, setActiveFileId, onAddFile, onRenameFile }) {
+function FileTab({ files, activeFileId, setActiveFileId, onAddFile, onRenameFile, onDeleteFile }) {
   return (
     <div className="h-9 bg-zinc-950 border-b border-zinc-800/50 flex items-end px-3 gap-0.5 shrink-0">
       {files?.map((file) => (
@@ -9,8 +9,8 @@ function FileTab({ files, activeFileId, setActiveFileId, onAddFile, onRenameFile
           title="Double-click to rename"
           className={
             file._id.toString() === activeFileId.toString()
-              ? "flex items-center gap-2 bg-[#0d0d12] border border-zinc-800/70 border-b-0 rounded-t-md px-3 py-1.5 text-xs text-zinc-300 cursor-pointer"
-              : "flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors"
+              ? "flex items-center gap-2 bg-[#0d0d12] border border-zinc-800/70 border-b-0 rounded-t-md px-3 py-1.5 text-xs text-zinc-300 cursor-pointer group"
+              : "flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors group"
           }
         >
           <svg
@@ -26,6 +26,16 @@ function FileTab({ files, activeFileId, setActiveFileId, onAddFile, onRenameFile
             <polyline points="14 2 14 8 20 8" />
           </svg>
           {file.name}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDeleteFile?.(file._id); }}
+            className="ml-1 text-zinc-600 hover:text-red-400 transition-colors"
+            title="Delete file"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
       ))}
 

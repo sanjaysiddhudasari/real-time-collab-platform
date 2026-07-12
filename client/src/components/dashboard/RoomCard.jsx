@@ -47,6 +47,9 @@ function RoomCard({ rooms, userId, onJoin, onDelete, joining, tab, search }) {
                     <h3 className="text-sm font-semibold text-white truncate">
                       {room.roomname}
                     </h3>
+                    {!room.isPublic && room.inviteCode && room.owner.toString() === userId.toString() && (
+                      <p className="text-[10px] text-violet-400/60 mt-1">code: {room.inviteCode}</p>
+                    )}
                   </div>
 
                   {room.owner.toString() === userId.toString() && (

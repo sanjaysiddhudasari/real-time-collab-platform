@@ -22,7 +22,10 @@ const LANG_CONFIG = {
 
   cpp: {
     ext: "cpp",
-    cmd: (f) => `g++ "${f}" -o "${f}.out" && "${f}.out"`,
+    cmd: (f) => {
+      const out = os.platform() === "win32" ? `${f}.exe` : `${f}.out`;
+      return `g++ "${f}" -o "${out}" && "${out}"`;
+    },
   },
 
   java: {
