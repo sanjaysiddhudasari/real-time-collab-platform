@@ -25,6 +25,7 @@ export const useRoomSocket = ({
   const initialized = useRef(false);
 
   useEffect(() => {
+    socket.connect();
     socket.emit("join-room", { roomId });
 
     socket.on("room-data", (data) => {
@@ -236,6 +237,10 @@ export const useRoomSocket = ({
       }, 2000);
     });
 
+    socket.on("room-deleted", () => {
+      window.location.href = "/";
+    });
+
     return () => {
       socket.emit("leave-room", { roomId });
       socket.off("room-data");
@@ -254,6 +259,7 @@ export const useRoomSocket = ({
       socket.off("user-typing");
       socket.off("user-offline");
       socket.off("user-online");
+      socket.off("room-deleted");
       document.querySelectorAll('[id^="label-"]').forEach((el) => el.remove());
     };
   }, [roomId]);

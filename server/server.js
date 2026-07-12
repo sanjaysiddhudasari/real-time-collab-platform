@@ -34,6 +34,7 @@ app.use("/api/rooms", roomRoutes);
 app.use("/api/messages", messageRoutes);
 const httpServer = createServer(app);
 const io = initSocket(httpServer);
+app.set("io", io);
 
 // Track which rooms each user is in (for clean disconnect handling)
 const userRooms = new Map(); // userId → { rooms: Set<roomId>, username: string }
@@ -153,7 +154,7 @@ io.on("connection", (socket) => {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
     }
-    const file = room.files.find(f => f._id.toString() === fileId.toString());
+    const file = room.files.find(f => f._id?.toString() === fileId.toString());
     if (file) {
       file.code = code;
       await room.save();
@@ -176,7 +177,7 @@ io.on("connection", (socket) => {
       socket.emit("room-error", { message: "unauthorized access" });
       return;
     }
-    const file = room.files.find(f => f._id.toString() === fileId.toString());
+    const file = room.files.find(f => f._id?.toString() === fileId.toString());
     console.log({ roomId, lang, fileId });
     if (file) {
       file.lang = lang;
@@ -306,7 +307,7 @@ io.on("connection", (socket) => {
     };
     const extLang = { js: "javascript", ts: "typescript", py: "python", cpp: "cpp", java: "java", go: "go", rs: "rust", rb: "ruby", php: "php", sql: "sql" };
     const ext = name.split(".").pop();
-    const file = room.files.find(f => f._id.toString() === fileId.toString());
+    const file = room.files.find(f => f._id?.toString() === fileId.toString());
     if (file) {
       file.name = name;
       if (extLang[ext]) file.lang = extLang[ext];
@@ -320,7 +321,7 @@ io.on("connection", (socket) => {
     if (!uid) return;
     const room = await Room.findOne({ roomId });
     if (!room) return;
-    room.files = room.files.filter((f) => f._id.toString() !== fileId.toString());
+    room.files = room.files.filter((f) => f._id?.toString() !== fileId.toString());
     await room.save();
     io.to(roomId).emit("file-deleted", { fileId });
   })

@@ -46,6 +46,9 @@ const getRoomById = async (req, res) => {
         if (!room) {
             return res.status(404).json({ message: 'Room not found' });
         }
+        if (!room.isPublic && !room.participants.some(p => (p._id?.toString() || p.toString()) === req.userId.toString())) {
+            return res.status(403).json({ message: 'Room not found' });
+        }
         res.status(200).json({ room });
     } catch (error) {
         console.error('Error fetching room:', error);
@@ -88,14 +91,10 @@ const leaveRoom=async(req,res)=>{
         }
         room.participants=room.participants.filter(participant=>participant.toString()!==userId.toString()); 
 
-        //owner assignment 
-        if(room.owner.toString()===userId){
-            if(room.participants.length>0){
-                room.owner=room.participants[0];
-            }else{
-                await Room.deleteOne({_id: room._id});
-                return res.status(200).json({message:'Left room successfully, room deleted as it has no participants'});
-            }
+        // Delete room if no participants left
+        if(room.participants.length===0){
+            await Room.deleteOne({_id: room._id});
+            return res.status(200).json({message:'Room deleted — no participants left'});
         }
 
         await room.save();
@@ -122,7 +121,11 @@ const getAllRooms=async(req,res)=>{
 const deleteRoom=async(req,res)=>{
     try {
         const {roomId}=req.params;
-        const response=await Room.deleteOne({roomId:roomId});
+        const room = await Room.findOne({roomId});
+        if (!room) return res.status(404).json({message:"Room not found"});
+        const io = req.app.get("io");
+        io.to(roomId).emit("room-deleted");
+        await Room.deleteOne({roomId:roomId});
         res.status(200).json({message:"succesfully deleted"});
     } catch (error) {
         console.error('Error in delete Rooms',error);

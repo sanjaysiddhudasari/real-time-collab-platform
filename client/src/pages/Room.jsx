@@ -86,8 +86,8 @@ export default function Room() {
         setIsLoading(false);
         if (data.files?.length > 0) setActiveFileId(data.files[0]._id);
       } catch (error) {
-        toast.error("Failed to load room", error);
-        setIsLoading(false);
+        toast.error("Room not found");
+        navigate("/", { replace: true });
       }
     };
     fetchRoomData();

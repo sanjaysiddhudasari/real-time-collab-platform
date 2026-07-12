@@ -60,7 +60,7 @@ function MonacoEditor({
         }}
         options={EDITOR_OPTIONS}
         value={activeFile?.code}
-      />
+      />  
     </div>
   );
 }

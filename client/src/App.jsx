@@ -7,6 +7,7 @@ import Room from "./pages/Room";
 import ForgotPassword from "./pages/ForgotPassword";
 import { Toaster } from "react-hot-toast";
 import api from "./services/api";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 
 function InviteRedirect() {
   const { code } = useParams();
@@ -37,13 +38,13 @@ function App() {
       />
 
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/room" element={<Room />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/room/:roomId" element={<Room />} />
-        <Route path="/invite/:code" element={<InviteRedirect />} />
+        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/room" element={<ProtectedRoute><Room /></ProtectedRoute>} />
+        <Route path="/room/:roomId" element={<ProtectedRoute><Room /></ProtectedRoute>} />
+        <Route path="/invite/:code" element={<ProtectedRoute><InviteRedirect /></ProtectedRoute>} />
       </Routes>
     </>
   );
