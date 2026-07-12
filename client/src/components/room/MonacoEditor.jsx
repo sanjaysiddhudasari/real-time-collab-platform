@@ -2,6 +2,7 @@ import Editor from "@monaco-editor/react";
 import { EDITOR_OPTIONS, configureTypeScript } from "../../utils/editorOptions";
 import { socket } from "../../socket/socket";
 import { useCursors } from "../../hooks/useCursors";
+import { useRef } from "react";
 
 function MonacoEditor({
   activeFileId,
@@ -12,7 +13,8 @@ function MonacoEditor({
   removeCursorRef,
   lastSyncedRef,
 }) {
-  const { handleCursorMove } = useCursors({ editorRef, roomId, activeFileId, socket, removeCursorRef });
+  const { handleCursorMove, repositionOnScroll } = useCursors({ editorRef, roomId, activeFileId, socket, removeCursorRef });
+  const syncTimer = useRef(null);
 
   const activeFile = files?.find(
     (file) => file._id.toString() === activeFileId.toString(),
@@ -28,6 +30,7 @@ function MonacoEditor({
           editorRef.current = editor;
           window.monaco = monaco;
           editor.onDidChangeCursorPosition(handleCursorMove);
+          editor.onDidScrollChange(() => repositionOnScroll(editor));
           configureTypeScript(monaco);
         }}
         onChange={(value) => {
@@ -46,11 +49,14 @@ function MonacoEditor({
                 : file,
             ),
           );
-          socket.emit("sync-code", {
-            roomId,
-            code: value,
-            fileId: activeFileId.toString(),
-          });
+          clearTimeout(syncTimer.current);
+          syncTimer.current = setTimeout(() => {
+            socket.emit("sync-code", {
+              roomId,
+              code: value,
+              fileId: activeFileId.toString(),
+            });
+          }, 50);
         }}
         options={EDITOR_OPTIONS}
         value={activeFile?.code}

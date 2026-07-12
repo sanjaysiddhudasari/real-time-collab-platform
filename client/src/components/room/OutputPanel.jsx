@@ -1,6 +1,5 @@
-
-
-function OutputPanel({setOutputOpen,isRunning,output}) {
+function OutputPanel({setOutputOpen,isRunning,output,runUser}) {
+  const isError = output?.startsWith("❌");
   return (
     <div
       className="bg-zinc-950 border-t border-zinc-800 shrink-0"
@@ -19,7 +18,9 @@ function OutputPanel({setOutputOpen,isRunning,output}) {
           >
             <path d="M4 17l6-6-6-6M12 19h8" />
           </svg>
-          <span className="text-zinc-400 text-xs font-medium">Output</span>
+          <span className="text-zinc-400 text-xs font-medium">
+            Output{runUser ? <span className="text-zinc-600 ml-1">· {runUser}</span> : null}
+          </span>
         </div>
         <button
           onClick={() => setOutputOpen(false)}
@@ -40,7 +41,7 @@ function OutputPanel({setOutputOpen,isRunning,output}) {
         </button>
       </div>
       <div
-        className="px-4 py-3 text-xs text-green-400 font-mono overflow-auto"
+        className={`px-4 py-3 text-xs font-mono overflow-auto ${isError ? "text-red-400" : "text-green-400"}`}
         style={{ height: 100 }}
       >
         {isRunning ? (

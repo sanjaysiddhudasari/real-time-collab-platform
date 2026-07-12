@@ -28,11 +28,12 @@ export default function Room() {
   const [users, setUsers] = useState([]);
   const [chatOpen, setChatOpen] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
+  const [runningFiles, setRunningFiles] = useState({});
   const [output, setOutput] = useState("");
   const [outputOpen, setOutputOpen] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [inviteCode, setInviteCode] = useState(null);
+  const [lastRunFileId, setLastRunFileId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [renameTarget, setRenameTarget] = useState(null);
 
@@ -52,7 +53,6 @@ export default function Room() {
     setMessages,
     setUsers,
     setRoomName,
-    setIsRunning,
     setOutputOpen,
     setOutput,
     setActiveFileId,
@@ -62,6 +62,8 @@ export default function Room() {
     removeCursorRef,
     lastSyncedRef,
     setInviteCode,
+    setLastRunFileId,
+    setRunningFiles,
   });
 
   useEffect(() => {
@@ -198,7 +200,7 @@ export default function Room() {
         roomName={roomName}
         handleLangChange={handleLangChange}
         handleRun={handleRun}
-        isRunning={isRunning}
+        isRunning={!!runningFiles[activeFileId]?.running}
         handleLeave={handleLeave}
         copied={copied}
         handleCopyInvite={handleCopyInvite}
@@ -225,11 +227,12 @@ export default function Room() {
             lastSyncedRef={lastSyncedRef}
           />
 
-          {outputOpen && (
+          {outputOpen && lastRunFileId === activeFileId?.toString() && (
             <OutputPanel
               setOutputOpen={setOutputOpen}
-              isRunning={isRunning}
+              isRunning={!!runningFiles[activeFileId]?.running}
               output={output}
+              runUser={runningFiles[activeFileId]?.username}
             />
           )}
         </div>

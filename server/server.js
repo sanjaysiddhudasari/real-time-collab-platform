@@ -89,9 +89,9 @@ io.on("connection", (socket) => {
         return;
       }
       console.log(roomData);
-      io.to(roomId).emit("room-data", roomData);
       io.to(roomId).emit("user-joined", { username, userId: uid });
       io.to(roomId).emit("user-online",{userId:uid, username});
+      socket.emit("room-data", roomData);
     } catch (error) {
       console.log(error);
       socket.emit("room-error", {
@@ -193,13 +193,15 @@ io.on("connection", (socket) => {
       socket.emit("room-error", { message: "room not found" });
       return;
     };
+    const user = await User.findById(uid);
+    const runUsername = user?.username || "Unknown";
     const file = room.files.find(f => f && f._id.toString() === fileId.toString());
     if (!file) {
       socket.emit("room-error", { message: " file not found " })
       return;
     }
-    runCode({ code: file.code, lang: file.lang, roomId }, io);
-    io.to(roomId).emit("run-start");
+    runCode({ code: file.code, lang: file.lang, roomId, fileId }, io);
+    io.to(roomId).emit("run-start", { fileId, username: runUsername });
   })
 
 
@@ -302,12 +304,15 @@ io.on("connection", (socket) => {
       socket.emit("room-error", { message: "room not found" });
       return;
     };
+    const extLang = { js: "javascript", ts: "typescript", py: "python", cpp: "cpp", java: "java", go: "go", rs: "rust", rb: "ruby", php: "php", sql: "sql" };
+    const ext = name.split(".").pop();
     const file = room.files.find(f => f._id.toString() === fileId.toString());
     if (file) {
       file.name = name;
+      if (extLang[ext]) file.lang = extLang[ext];
       await room.save();
     }
-    io.to(roomId).emit("file-renamed", { fileId, name });
+    io.to(roomId).emit("file-renamed", { fileId, name, lang: file?.lang });
   })
 
   socket.on("delete-file", async ({ roomId, fileId }) => {

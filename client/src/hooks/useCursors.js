@@ -7,6 +7,9 @@ import {
 
 export function useCursors({ editorRef, roomId, activeFileId, socket, removeCursorRef }) {
   const decorations = useRef({});
+  const userPositions = useRef({}); // { userId: { username, position } }
+  const fileIdRef = useRef(activeFileId);
+  useEffect(() => { fileIdRef.current = activeFileId; }, [activeFileId]);
 
   // ── 1. Emit local cursor position ──────────────────────────────────
   const handleCursorMove = useCallback(
@@ -15,14 +18,14 @@ export function useCursors({ editorRef, roomId, activeFileId, socket, removeCurs
       if (!user) return;
       socket.emit("cursor-move", {
         roomId,
-        fileId: activeFileId,
+        fileId: fileIdRef.current,
         position: {
           lineNumber: e.position.lineNumber,
           column: e.position.column,
         },
       });
     },
-    [roomId, activeFileId, socket],
+    [roomId, socket],
   );
 
   // ── 2. Listen for remote cursor events ──────────────────────────────
@@ -45,6 +48,7 @@ export function useCursors({ editorRef, roomId, activeFileId, socket, removeCurs
 
       const label = createCursorLabel(userId, username);
       updateCursorLabelPosition(label, editor, position);
+      userPositions.current[userId] = { username, position };
     });
 
     return () => { socket.off("cursor-move"); };
@@ -59,6 +63,7 @@ export function useCursors({ editorRef, roomId, activeFileId, socket, removeCurs
       });
       decorations.current = {};
     }
+    userPositions.current = {};
   }, [activeFileId, editorRef]);
 
   // ── 4. Expose removeUserCursor for useRoomSocket ───────────────────
@@ -73,5 +78,14 @@ export function useCursors({ editorRef, roomId, activeFileId, socket, removeCurs
     }, [editorRef]);
   }
 
-  return { handleCursorMove };
+  // ── 5. Reposition labels after editor scroll ──────────────────────
+  const repositionOnScroll = useCallback((editor) => {
+    const { current: positions } = userPositions;
+    Object.keys(positions).forEach((userId) => {
+      const label = document.getElementById(`label-${userId}`);
+      if (label) updateCursorLabelPosition(label, editor, positions[userId].position);
+    });
+  }, []);
+
+  return { handleCursorMove, repositionOnScroll };
 }

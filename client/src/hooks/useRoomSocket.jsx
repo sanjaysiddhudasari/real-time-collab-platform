@@ -9,16 +9,17 @@ export const useRoomSocket = ({
   setMessages,
   setUsers,
   setRoomName,
-  setIsRunning,
   setOutputOpen,
   setOutput,
   setActiveFileId,
-  activeFileId,
   setIsLoading,
+  activeFileId,
   editorRef,
   removeCursorRef,
   lastSyncedRef,
   setInviteCode,
+  setLastRunFileId,
+  setRunningFiles,
 }) => {
   const typingTimeouts = useRef({});
   const initialized = useRef(false);
@@ -26,7 +27,6 @@ export const useRoomSocket = ({
   useEffect(() => {
     socket.emit("join-room", { roomId });
 
-    // ── Room data (full sync) ───────────────────────────────────────────
     socket.on("room-data", (data) => {
       const roomname = data.roomname;
       const participants = data.participants;
@@ -52,12 +52,10 @@ export const useRoomSocket = ({
       if (data.inviteCode) setInviteCode(data.inviteCode);
     });
 
-    // ── Room errors ─────────────────────────────────────────────────────
     socket.on("room-error", ({ message }) => {
       console.log(message);
     });
 
-    // ── Code sync ─────────────────────────────────────────────────
     socket.on("receive-code", ({ code, fileId }) => {
       if (lastSyncedRef) lastSyncedRef.current = code;
       setFiles((prev) =>
@@ -69,32 +67,33 @@ export const useRoomSocket = ({
       );
     });
 
-    // ── File rename ─────────────────────────────────────────────────────
-    socket.on("file-renamed", ({ fileId, name }) => {
+    socket.on("file-renamed", ({ fileId, name, lang }) => {
       setFiles((prev) =>
         prev.map((f) =>
-          f._id.toString() === fileId.toString() ? { ...f, name } : f,
+          f._id.toString() === fileId.toString()
+            ? { ...f, name, ...(lang ? { lang } : {}) }
+            : f,
         ),
       );
     });
 
-    // ── Code execution (run) ────────────────────────────────────────────
-    socket.on("run-start", () => {
-      setIsRunning(true);
+    socket.on("run-start", ({ fileId, username }) => {
+      setLastRunFileId(fileId);
+      setRunningFiles((prev) => ({ ...prev, [fileId]: { running: true, username } }));
       setOutputOpen(true);
       setOutput("");
     });
 
-    socket.on("run-output", ({ output, error }) => {
-      setIsRunning(false);
+    socket.on("run-output", ({ fileId, output, error }) => {
+      setLastRunFileId(fileId);
+      setRunningFiles((prev) => ({ ...prev, [fileId]: { running: false } }));
       if (error) {
-        setOutput(`❌ Error\n\n${error}`);
+        setOutput(`❌ ${error}`);
       } else {
-        setOutput(`✅ Output\n\n${output}`);
+        setOutput(`✅ ${output}`);
       }
     });
 
-    // ── User presence ───────────────────────────────────────────────────
     socket.on("user-joined", ({ username, userId }) => {
       toast.custom(
         (t) => (
@@ -115,7 +114,6 @@ export const useRoomSocket = ({
         ),
         { duration: 3000 },
       );
-      // Add user to list if not already present
       setUsers((prev) => {
         if (prev.some((u) => u._id.toString() === userId?.toString())) {
           return prev.map((u) =>
@@ -135,24 +133,14 @@ export const useRoomSocket = ({
             className={`flex items-center gap-3 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl transition-all ${t.visible ? "opacity-100" : "opacity-0"}`}
           >
             <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center shrink-0">
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#a1a1aa"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </div>
             <div>
-              <p className="text-zinc-300 text-xs font-medium">
-                {username} left the room
-              </p>
+              <p className="text-zinc-300 text-xs font-medium">{username} left the room</p>
               <p className="text-zinc-500 text-[10px] mt-0.5">Just now</p>
             </div>
             <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 ml-1 shrink-0" />
@@ -160,8 +148,6 @@ export const useRoomSocket = ({
         ),
         { duration: 3000 },
       );
-
-      // Mark user as offline (don't remove — keeps their messages in chat)
       setUsers((prev) =>
         prev.map((u) =>
           u._id.toString() === userId.toString()
@@ -169,12 +155,9 @@ export const useRoomSocket = ({
             : u,
         ),
       );
-
-      // Clean up cursor label + decoration for the leaving user
       removeCursorRef?.current?.(userId);
     });
 
-    // ── Language change ─────────────────────────────────────────────────
     socket.on("lang-change", ({ lang, fileId }) => {
       setFiles((prev) =>
         prev.map((file) =>
@@ -185,7 +168,6 @@ export const useRoomSocket = ({
       );
     });
 
-    // ── New messages ────────────────────────────────────────────────────
     socket.on("new-message", (msg) => {
       const formattedMsg = {
         ...msg,
@@ -199,10 +181,8 @@ export const useRoomSocket = ({
       setMessages((prev) => [...prev, formattedMsg]);
     });
 
-    // ── File created by someone in the room ────────────────────────────
     socket.on("file-created", (newFile) => {
       setFiles((prev) => [...prev, newFile]);
-      setActiveFileId(newFile._id);
     });
 
     socket.on("file-deleted", ({ fileId }) => {
@@ -215,8 +195,7 @@ export const useRoomSocket = ({
       });
     });
 
-    // ── Online / Offline ────────────────────────────────────────────────
-    socket.on("user-online", ({ userId, username }) => {
+    socket.on("user-online", ({ userId }) => {
       setUsers((prev) =>
         prev.map((u) =>
           u._id.toString() === userId.toString() ? { ...u, active: true } : u,
@@ -234,7 +213,6 @@ export const useRoomSocket = ({
       );
     });
 
-    // ── Typing indicator ────────────────────────────────────────────────
     socket.on("user-typing", ({ userId }) => {
       setUsers((prev) =>
         prev.map((u) =>
@@ -258,7 +236,6 @@ export const useRoomSocket = ({
       }, 2000);
     });
 
-    // ── Cleanup on unmount / room change ────────────────────────────────
     return () => {
       socket.emit("leave-room", { roomId });
       socket.off("room-data");
@@ -277,7 +254,6 @@ export const useRoomSocket = ({
       socket.off("user-typing");
       socket.off("user-offline");
       socket.off("user-online");
-
       document.querySelectorAll('[id^="label-"]').forEach((el) => el.remove());
     };
   }, [roomId]);

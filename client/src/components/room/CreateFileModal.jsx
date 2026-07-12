@@ -15,6 +15,8 @@ const LANGUAGES = [
   { value: "sql", label: "SQL" },
 ];
 
+const EXT_MAP = { javascript: ".js", typescript: ".ts", python: ".py", html: ".html", css: ".css", cpp: ".cpp", java: ".java", go: ".go", rust: ".rs", php: ".php", ruby: ".rb", sql: ".sql" };
+
 export default function CreateFileModal({ isOpen, onClose, onCreate }) {
   const [name, setName] = useState("");
   const [lang, setLang] = useState("javascript");
@@ -24,7 +26,9 @@ export default function CreateFileModal({ isOpen, onClose, onCreate }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onCreate({ name: name.trim(), lang });
+    let finalName = name.trim();
+    if (!finalName.includes(".")) finalName += EXT_MAP[lang] || "";
+    onCreate({ name: finalName, lang });
     setName("");
     setLang("javascript");
     onClose();

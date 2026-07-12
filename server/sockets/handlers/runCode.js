@@ -12,7 +12,7 @@ const LANG_CONFIG = {
 
   python: {
     ext: "py",
-    cmd: (f) => `python3 "${f}"`,
+    cmd: (f) => `python "${f}"`,
   },
 
   typescript: {
@@ -40,14 +40,14 @@ const LANG_CONFIG = {
   },
 };
 
-const runCode = ({ code, lang, roomId }, io) => {
+const runCode = ({ code, lang, roomId, fileId }, io) => {
 
   const config = LANG_CONFIG[lang];
 
   // Language not supported
   if (!config) {
 
-    io.to(roomId).emit("run-output", {
+    io.to(roomId).emit("run-output", { fileId,
       error: `Language "${lang}" is not supported.`,
     });
 
@@ -77,7 +77,7 @@ const runCode = ({ code, lang, roomId }, io) => {
       // Timeout
       if (error?.killed) {
 
-        io.to(roomId).emit("run-output", {
+        io.to(roomId).emit("run-output", { fileId,
           output: null,
           error: "⏱ Execution timed out (10s limit exceeded)",
         });
@@ -86,7 +86,7 @@ const runCode = ({ code, lang, roomId }, io) => {
       }
 
       // Emit result
-      io.to(roomId).emit("run-output", {
+      io.to(roomId).emit("run-output", { fileId,
         output: stdout || null,
         error: stderr || (error ? error.message : null),
       });
