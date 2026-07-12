@@ -8,7 +8,7 @@ function FileTab({ files, activeFileId, setActiveFileId, onAddFile, onRenameFile
           onDoubleClick={() => onRenameFile?.(file._id)}
           title="Double-click to rename"
           className={
-            file._id.toString() === activeFileId.toString()
+            file._id?.toString() === activeFileId?.toString()
               ? "flex items-center gap-2 bg-[#0d0d12] border border-zinc-800/70 border-b-0 rounded-t-md px-3 py-1.5 text-xs text-zinc-300 cursor-pointer group"
               : "flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors group"
           }

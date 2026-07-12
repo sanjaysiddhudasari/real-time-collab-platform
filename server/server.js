@@ -195,7 +195,7 @@ io.on("connection", (socket) => {
     };
     const user = await User.findById(uid);
     const runUsername = user?.username || "Unknown";
-    const file = room.files.find(f => f && f._id.toString() === fileId.toString());
+    const file = room.files.find(f => f && f._id?.toString() === fileId?.toString());
     if (!file) {
       socket.emit("room-error", { message: " file not found " })
       return;

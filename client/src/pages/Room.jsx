@@ -167,7 +167,16 @@ export default function Room() {
     const link = inviteCode
       ? `${window.location.origin}/invite/${inviteCode}`
       : `${window.location.origin}/room/${roomId}`;
-    navigator.clipboard.writeText(link);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = link;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

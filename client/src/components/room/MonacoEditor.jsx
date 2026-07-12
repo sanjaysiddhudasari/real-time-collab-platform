@@ -17,7 +17,7 @@ function MonacoEditor({
   const syncTimer = useRef(null);
 
   const activeFile = files?.find(
-    (file) => file._id.toString() === activeFileId.toString(),
+    (file) => file._id?.toString() === activeFileId?.toString(),
   );
 
   return (
@@ -39,12 +39,12 @@ function MonacoEditor({
             return;
           }
           const f = files?.find(
-            (file) => file._id.toString() === activeFileId.toString(),
+            (file) => file._id?.toString() === activeFileId?.toString(),
           );
           if (!f) return;
           setFiles((prev) =>
             prev.map((file) =>
-              file._id.toString() === activeFileId.toString()
+              file._id?.toString() === activeFileId?.toString()
                 ? { ...file, code: value }
                 : file,
             ),
@@ -54,7 +54,7 @@ function MonacoEditor({
             socket.emit("sync-code", {
               roomId,
               code: value,
-              fileId: activeFileId.toString(),
+              fileId: activeFileId?.toString(),
             });
           }, 50);
         }}
