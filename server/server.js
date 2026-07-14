@@ -17,6 +17,7 @@ const authRoutes = require("./routes/auth.routes");
 const roomRoutes = require("./routes/rooms.routes");
 const messageRoutes = require('./routes/message.routes')
 const aiRoutes = require('./routes/ai.routes')
+const commentRoutes = require('./routes/comment.routes')
 const connectDb = require("./db/connection");
 
 const app = express();
@@ -34,6 +35,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/ai",aiRoutes);
+app.use("/api/comments",commentRoutes);
 const httpServer = createServer(app);
 const io = initSocket(httpServer);
 app.set("io", io);

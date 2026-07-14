@@ -17,3 +17,11 @@
 .cursor-gutter-4::before { content:''; display:block; width:4px; height:4px; border-radius:50%; background:#60a5fa; margin:auto; }
 .cursor-gutter-5::before { content:''; display:block; width:4px; height:4px; border-radius:50%; background:#f472b6; margin:auto; }
 .cursor-gutter-6::before { content:''; display:block; width:4px; height:4px; border-radius:50%; background:#facc15; margin:auto; }
+
+/* AI review streaming cursor */
+@keyframes ai-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+.ai-stream-cursor { display: inline-block; animation: ai-blink 1s step-start infinite; }
+
+/* AI review panel slide-in */
+@keyframes ai-panel-slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.ai-panel-slide-in { animation: ai-panel-slide-in 200ms ease-out; }

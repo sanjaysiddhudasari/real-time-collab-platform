@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { LANGUAGES,avatarColor } from './room.constants';
 
 
-function RoomNav({lang,setChatOpen,chatOpen,roomName,handleLangChange,users,handleRun,handleLeave,isRunning,handleCopyInvite,copied}) {
+function RoomNav({lang,setChatOpen,chatOpen,setAiOpen,aiOpen,roomName,handleLangChange,users,handleRun,handleLeave,isRunning,handleCopyInvite,copied}) {
     const navigate=useNavigate();
   return (
     <nav className="h-12 bg-zinc-950 border-b border-zinc-800/70 flex items-center justify-between px-4 shrink-0 z-20">
@@ -178,6 +178,14 @@ function RoomNav({lang,setChatOpen,chatOpen,roomName,handleLangChange,users,hand
             >
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
+          </button>
+
+          {/* AI review toggle */}
+          <button
+            onClick={() => setAiOpen((p) => !p)}
+            className={`p-1.5 rounded-lg border transition duration-150 ${aiOpen ? "bg-blue-600/20 border-blue-600/40 text-blue-400" : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200"}`}
+          >
+            <span className="text-xs leading-none">🤖</span>
           </button>
 
           {/* Leave — 🔌 calls handleLeave */}

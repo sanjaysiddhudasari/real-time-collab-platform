@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { socket } from "../socket/socket";
+
 
 import RoomNav from "../components/room/RoomNav";
 import Workspace from "../components/room/Workspace";
 import RoomModals from "../components/room/RoomModals";
 import ChatSideBar from "../components/room/ChatSideBar";
+import AISuggestionPanel from "../components/room/AiSuggesstionPanel";
+
+
 import { useRoomSocket } from "../hooks/useRoomSocket";
 import useUser from "../hooks/useUser";
 import useChat from "../hooks/useChat";
@@ -15,8 +18,17 @@ import useCursorStyles from "../hooks/useCursorStyles";
 import useInvite from "../hooks/useInvite";
 import useRoomData from "../hooks/useRoomData";
 import useRoomActions from "../hooks/useRoomActions";
+import useAiReviewController from "../hooks/useAiReviewController";
+
+
 
 export default function Room() {
+
+  const chatEndRef = useRef(null);
+  const editorRef = useRef(null);
+  const removeCursorRef = useRef(null);
+  const lastSyncedRef = useRef(null);
+
   const { roomId } = useParams();
   const { user } = useUser();
   const {input, setInput, handleSend, handleTyping} = useChat({roomId});
@@ -26,14 +38,12 @@ export default function Room() {
   useCursorStyles();
   const { copied, handleCopyInvite, inviteCode, setInviteCode } = useInvite({roomId});
   const { handleLeave } = useRoomActions({ roomId });
+  const ai=useAiReviewController({editorRef, activeFileId}); 
 
   const [users, setUsers] = useState([]);
   const [chatOpen, setChatOpen] = useState(true);
+  const [aiOpen, setAiOpen] = useState(false);
 
-  const chatEndRef = useRef(null);
-  const editorRef = useRef(null);
-  const removeCursorRef = useRef(null);
-  const lastSyncedRef = useRef(null);
 
   useRoomSocket({
     roomId, user,
@@ -63,6 +73,8 @@ export default function Room() {
         lang={activeFile?.lang}
         setChatOpen={setChatOpen}
         chatOpen={chatOpen}
+        setAiOpen={setAiOpen}
+        aiOpen={aiOpen}
         roomName={roomName}
         handleLangChange={handleLangChange}
         handleRun={handleRun}
@@ -92,6 +104,20 @@ export default function Room() {
             handleSend={handleSend}
             chatEndRef={chatEndRef}
             onTyping={handleTyping}
+          />
+        )}
+
+        {aiOpen && (
+          <AISuggestionPanel
+            suggestion={ai.currentRaw}
+            isStreaming={ai.isStreaming}
+            error={ai.error}
+            onReview={(code, lang) => ai.triggerReview({ code, language: lang, fileId: activeFileId, roomId })}
+            code={activeFile?.code}
+            language={activeFile?.lang}
+            editorRef={editorRef}
+            parsedSuggestions={ai.parsedSuggestions}
+            toggleLine={ai.toggleLine}
           />
         )}
       </div>

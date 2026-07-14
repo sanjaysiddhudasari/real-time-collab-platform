@@ -1,5 +1,5 @@
-import { useEffect, useState,useParams } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate,useParams } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import useUser from "./useUser";
