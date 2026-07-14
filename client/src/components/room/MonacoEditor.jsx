@@ -5,26 +5,22 @@ import { useCursors } from "../../hooks/useCursors";
 import { useRef } from "react";
 
 function MonacoEditor({
-  activeFileId,
-  files,
+  file,
   setFiles,
   roomId,
   editorRef,
   removeCursorRef,
   lastSyncedRef,
 }) {
+  const activeFileId = file?._id;
   const { handleCursorMove, repositionOnScroll } = useCursors({ editorRef, roomId, activeFileId, socket, removeCursorRef });
   const syncTimer = useRef(null);
-
-  const activeFile = files?.find(
-    (file) => file._id?.toString() === activeFileId?.toString(),
-  );
 
   return (
     <div className="flex-1 overflow-hidden relative">
       <Editor
         height="100%"
-        language={activeFile?.lang}
+        language={file?.lang}
         theme="vs-dark"
         onMount={(editor, monaco) => {
           editorRef.current = editor;
@@ -38,15 +34,12 @@ function MonacoEditor({
             lastSyncedRef.current = null;
             return;
           }
-          const f = files?.find(
-            (file) => file._id?.toString() === activeFileId?.toString(),
-          );
-          if (!f) return;
+          if (!file) return;
           setFiles((prev) =>
-            prev.map((file) =>
-              file._id?.toString() === activeFileId?.toString()
-                ? { ...file, code: value }
-                : file,
+            prev.map((f) =>
+              f._id?.toString() === activeFileId?.toString()
+                ? { ...f, code: value }
+                : f,
             ),
           );
           clearTimeout(syncTimer.current);
@@ -59,8 +52,8 @@ function MonacoEditor({
           }, 50);
         }}
         options={EDITOR_OPTIONS}
-        value={activeFile?.code}
-      />  
+        value={file?.code}
+      />
     </div>
   );
 }
