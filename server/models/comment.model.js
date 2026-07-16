@@ -35,6 +35,12 @@ const commentSchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    replies: [{
+      explanation: String,
+      author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      createdAt: { type: Date, default: Date.now },
+    }],
+    isResolved: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

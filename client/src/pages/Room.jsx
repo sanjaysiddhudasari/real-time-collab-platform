@@ -1,14 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
-
 import RoomNav from "../components/room/RoomNav";
 import Workspace from "../components/room/Workspace";
 import RoomModals from "../components/room/RoomModals";
 import ChatSideBar from "../components/room/ChatSideBar";
 import AISuggestionPanel from "../components/room/AiSuggesstionPanel";
-
-
+import CommentThread from "../components/room/CommentThread";
 import { useRoomSocket } from "../hooks/useRoomSocket";
 import useUser from "../hooks/useUser";
 import useChat from "../hooks/useChat";
@@ -19,18 +17,17 @@ import useInvite from "../hooks/useInvite";
 import useRoomData from "../hooks/useRoomData";
 import useRoomActions from "../hooks/useRoomActions";
 import useAiReviewController from "../hooks/useAiReviewController";
-
-
+import useComments from "../hooks/useComments";
 
 export default function Room() {
+  const { roomId } = useParams();
+  const { user } = useUser();
 
   const chatEndRef = useRef(null);
   const editorRef = useRef(null);
   const removeCursorRef = useRef(null);
   const lastSyncedRef = useRef(null);
 
-  const { roomId } = useParams();
-  const { user } = useUser();
   const {input, setInput, handleSend, handleTyping} = useChat({roomId});
   const { files, setFiles, roomName, setRoomName, messages, setMessages, isloading, setIsLoading } = useRoomData();
   const { activeFile, activeFileId, setActiveFileId, showCreateModal, setShowCreateModal, renameTarget, setRenameTarget, handleCreateFile, handleRenameFile, handleLangChange } = useFiles({roomId, files});
@@ -38,12 +35,14 @@ export default function Room() {
   useCursorStyles();
   const { copied, handleCopyInvite, inviteCode, setInviteCode } = useInvite({roomId});
   const { handleLeave } = useRoomActions({ roomId });
-  const ai=useAiReviewController({editorRef, activeFileId}); 
+  const ai = useAiReviewController({ editorRef, activeFileId, roomId });
+  const commentHook = useComments({ roomId, fileId: activeFileId });
 
   const [users, setUsers] = useState([]);
   const [chatOpen, setChatOpen] = useState(true);
   const [aiOpen, setAiOpen] = useState(false);
-
+  const [activeCommentLine, setActiveCommentLine] = useState(null);
+  const [commentsOpen, setCommentsOpen] = useState(true);
 
   useRoomSocket({
     roomId, user,
@@ -57,6 +56,10 @@ export default function Room() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!commentsOpen) setActiveCommentLine(null);
+  }, [commentsOpen]);
 
   if (isloading) {
     return (
@@ -73,8 +76,6 @@ export default function Room() {
         lang={activeFile?.lang}
         setChatOpen={setChatOpen}
         chatOpen={chatOpen}
-        setAiOpen={setAiOpen}
-        aiOpen={aiOpen}
         roomName={roomName}
         handleLangChange={handleLangChange}
         handleRun={handleRun}
@@ -82,6 +83,10 @@ export default function Room() {
         handleLeave={handleLeave}
         copied={copied}
         handleCopyInvite={handleCopyInvite}
+        aiOpen={aiOpen}
+        setAiOpen={setAiOpen}
+        commentsOpen={commentsOpen}
+        setCommentsOpen={setCommentsOpen}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -93,6 +98,9 @@ export default function Room() {
           outputOpen={outputOpen} setOutputOpen={setOutputOpen}
           output={output} runningFiles={runningFiles} lastRunFileId={lastRunFileId}
           setShowCreateModal={setShowCreateModal} setRenameTarget={setRenameTarget}
+          comments={commentHook.comments}
+          onGutterClick={(line) => setActiveCommentLine(line)}
+          activeCommentLine={activeCommentLine}
         />
 
         {chatOpen && (
@@ -118,9 +126,31 @@ export default function Room() {
             editorRef={editorRef}
             parsedSuggestions={ai.parsedSuggestions}
             toggleLine={ai.toggleLine}
+            onAddSuggestion={(item) => commentHook.create({
+              roomId,
+              fileId: activeFileId,
+              line: item.line,
+              type: item.type,
+              explanation: item.explanation,
+              suggestion: item.suggestion,
+              isAI: true,
+            })}
           />
         )}
       </div>
+
+      {activeCommentLine && (
+        <CommentThread
+          comments={commentHook.comments}
+          line={activeCommentLine}
+          onClose={() => setActiveCommentLine(null)}
+          onReply={commentHook.reply}
+          onResolve={commentHook.resolve}
+          onUnresolve={commentHook.unresolve}
+          onCreate={commentHook.create}
+          editorRef={editorRef}
+        />
+      )}
 
       <RoomModals
         showCreateModal={showCreateModal} setShowCreateModal={setShowCreateModal}

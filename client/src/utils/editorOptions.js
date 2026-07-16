@@ -3,6 +3,7 @@ export const EDITOR_OPTIONS = {
   fontFamily: "JetBrains Mono, monospace",
   minimap: { enabled: false },
   lineNumbers: "on",
+  glyphMargin: true,
   scrollBeyondLastLine: false,
   wordWrap: "on",
   tabSize: 2,

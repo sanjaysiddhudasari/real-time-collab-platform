@@ -45,6 +45,8 @@ function useCursorStyles() {
       ".ai-suggest-margin-red { background: #ef4444; width: 4px !important; height: 4px !important; border-radius: 50%; }",
       ".ai-suggest-margin-blue { background: #3b82f6; width: 4px !important; height: 4px !important; border-radius: 50%; }",
       ".ai-suggest-margin-yellow { background: #eab308; width: 4px !important; height: 4px !important; border-radius: 50%; }",
+      ".comment-gutter-dot { background: #a855f7; width: 8px !important; height: 8px !important; border-radius: 50%; margin-left: 4px; }",
+      ".comment-active-line { border-left: 3px solid #a855f7 !important; background: #a855f710 !important; box-sizing: border-box; }",
     ].join("\n");
     styleTag.innerHTML = cursorCSS + "\n" + aiCSS;
     document.head.appendChild(styleTag);

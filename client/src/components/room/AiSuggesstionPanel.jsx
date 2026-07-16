@@ -7,7 +7,8 @@ function AISuggestionPanel({
   language,
   editorRef,
   parsedSuggestions,
-  toggleLine
+  toggleLine,
+  onAddSuggestion
 }) {
   const jumpToLine = (line) => {
     const editor = editorRef?.current;
@@ -69,7 +70,14 @@ function AISuggestionPanel({
                 <span className="rounded bg-blue-600/20 px-2 py-0.5 text-xs font-semibold text-blue-400">
                   Line {item.line}
                 </span>
-                <span className="rounded bg-amber-600/20 px-2 py-0.5 text-xs font-semibold text-amber-400">
+                <span
+                  className="rounded px-2 py-0.5 text-xs font-semibold"
+                  style={{
+                    background: item.type === "Bug" ? "#ef444420" : item.type === "Performance" ? "#3b82f620" : "#eab30820",
+                    color: item.type === "Bug" ? "#ef4444" : item.type === "Performance" ? "#3b82f6" : "#eab308",
+                  }}
+                >
+                  <span className={`inline-block w-2 h-2 rounded-full mr-1 ${item.type === "Bug" ? "bg-red-500" : item.type === "Performance" ? "bg-blue-500" : "bg-yellow-500"}`} />
                   {item.type}
                 </span>
               </div>
@@ -79,6 +87,12 @@ function AISuggestionPanel({
                   {item.suggestion}
                 </pre>
               )}
+              <button
+                onClick={(e) => { e.stopPropagation(); onAddSuggestion?.(item); }}
+                className="mt-2 text-xs bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded"
+              >
+                + Add Comment
+              </button>
             </div>
           ))
         )}

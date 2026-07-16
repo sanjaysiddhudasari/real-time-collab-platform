@@ -8,6 +8,7 @@ export default function Workspace({
   roomId, editorRef, removeCursorRef, lastSyncedRef,
   outputOpen, setOutputOpen, output, runningFiles, lastRunFileId,
   setShowCreateModal, setRenameTarget,
+  comments, onGutterClick, activeCommentLine,
 }) {
   const activeFile = files?.find(
     (file) => file._id?.toString() === activeFileId?.toString(),
@@ -30,6 +31,9 @@ export default function Workspace({
         editorRef={editorRef}
         removeCursorRef={removeCursorRef}
         lastSyncedRef={lastSyncedRef}
+        comments={comments}
+        onGutterClick={onGutterClick}
+        activeCommentLine={activeCommentLine}
       />
       {outputOpen && lastRunFileId === activeFileId?.toString() && (
         <OutputPanel
