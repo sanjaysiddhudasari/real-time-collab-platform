@@ -22,8 +22,11 @@
 @keyframes ai-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 .ai-stream-cursor { display: inline-block; animation: ai-blink 1s step-start infinite; }
 
-/* Comment gutter dot */
+/* Comment gutter dots — colored by type, matching the AI review panel */
 .comment-gutter-dot::before { content:''; display:block; width:6px; height:6px; border-radius:50%; background:#fbbf24; margin:auto; }
+.comment-dot-red::before { background:#ef4444; }
+.comment-dot-blue::before { background:#3b82f6; }
+.comment-dot-yellow::before { background:#eab308; }
 
 /* Active comment line highlight */
 .comment-active-line { background: rgba(251,191,36,0.08) !important; }

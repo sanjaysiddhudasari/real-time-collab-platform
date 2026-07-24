@@ -28,19 +28,23 @@ function MonacoEditor({
     editor.deltaDecorations(commentDecorations.current, []);
     commentDecorations.current = [];
     if (!commentsOpen || !comments?.length) return;
-    const decos = [];
-    const seen = new Set();
+    // Group comments by line; dot color = highest-priority type on that line
+    const COLOR = { Bug: "red", Performance: "blue", Style: "yellow" };
+    const PRIORITY = { Bug: 0, Performance: 1, Style: 2 };
+    const byLine = new Map();
     comments.forEach((c) => {
-      if (seen.has(c.line)) return;
-      seen.add(c.line);
-      decos.push({
-        range: new window.monaco.Range(c.line, 1, c.line, 1),
-        options: {
-          glyphMarginClassName: "comment-gutter-dot",
-          glyphMarginHoverMessage: { value: `${seen.size > 1 ? "Multiple" : c.type} — Line ${c.line}`, isTrusted: true },
-        },
-      });
+      const entry = byLine.get(c.line) || { type: c.type, count: 0 };
+      entry.count += 1;
+      if ((PRIORITY[c.type] ?? 3) < (PRIORITY[entry.type] ?? 3)) entry.type = c.type;
+      byLine.set(c.line, entry);
     });
+    const decos = [...byLine.entries()].map(([line, entry]) => ({
+      range: new window.monaco.Range(line, 1, line, 1),
+      options: {
+        glyphMarginClassName: `comment-gutter-dot comment-dot-${COLOR[entry.type] || "yellow"}`,
+        glyphMarginHoverMessage: { value: `${entry.count > 1 ? "Multiple" : entry.type} — Line ${line}`, isTrusted: true },
+      },
+    }));
     commentDecorations.current = editor.deltaDecorations([], decos);
   }, [comments, commentsOpen, editorRef]);
 

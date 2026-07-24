@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import RoomNav from "../components/room/RoomNav";
 import Workspace from "../components/room/Workspace";
@@ -60,6 +61,47 @@ export default function Room() {
   useEffect(() => {
     if (!commentsOpen) setActiveCommentLine(null);
   }, [commentsOpen]);
+
+  // Insert the AI suggestion into the code as a comment above the flagged
+  // line (live-synced to everyone), then save it as a thread comment.
+  const handleAddSuggestion = async (item) => {
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    let inserted = 0;
+    if (editor && model && window.monaco && item.line <= model.getLineCount()) {
+      const indent = (model.getLineContent(item.line) || "").match(/^\s*/)?.[0] || "";
+      const marker = ["python", "ruby"].includes(activeFile?.lang)
+        ? "#"
+        : activeFile?.lang === "sql"
+          ? "--"
+          : "//";
+      const commentLines = [
+        `${marker} AI Review [${item.type}]: ${item.explanation}`,
+        ...(item.suggestion
+          ? item.suggestion.split("\n").map((l) => `${marker} Suggestion: ${l}`)
+          : []),
+      ];
+      editor.executeEdits("ai-suggestion", [{
+        range: new window.monaco.Range(item.line, 1, item.line, 1),
+        text: commentLines.map((l) => indent + l).join("\n") + "\n",
+      }]);
+      inserted = commentLines.length;
+    }
+    try {
+      await commentHook.create({
+        roomId,
+        fileId: activeFileId,
+        line: item.line + inserted,
+        type: item.type,
+        explanation: item.explanation,
+        suggestion: item.suggestion,
+        isAI: true,
+      });
+      toast.success("Suggestion added as code comment");
+    } catch {
+      toast.error("Failed to add comment");
+    }
+  };
 
   if (isloading) {
     return (
@@ -127,15 +169,7 @@ export default function Room() {
             editorRef={editorRef}
             parsedSuggestions={ai.parsedSuggestions}
             toggleLine={ai.toggleLine}
-            onAddSuggestion={(item) => commentHook.create({
-              roomId,
-              fileId: activeFileId,
-              line: item.line,
-              type: item.type,
-              explanation: item.explanation,
-              suggestion: item.suggestion,
-              isAI: true,
-            })}
+            onAddSuggestion={handleAddSuggestion}
           />
         )}
       </div>

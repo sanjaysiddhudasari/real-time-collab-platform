@@ -66,14 +66,15 @@ export default function useComments({ roomId, fileId }) {
     refresh();
   }, [refresh]);
 
-  const create = useCallback(async ({ line, type, explanation, suggestion }) => {
-    if (!roomId || !fileId) return;
-    await fetch(`${API}/comments`, {
+  const create = useCallback(async ({ line, type, explanation, suggestion, isAI }) => {
+    if (!roomId || !fileId) throw new Error("No active file");
+    const res = await fetch(`${API}/comments`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ roomId, fileId, line, type, explanation, suggestion }),
+      body: JSON.stringify({ roomId, fileId, line, type, explanation, suggestion, isAI }),
     });
+    if (!res.ok) throw new Error("Failed to create comment");
     socket.emit("comment-updated");
     refresh();
   }, [roomId, fileId, refresh]);
