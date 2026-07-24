@@ -28,7 +28,7 @@ const register=async(req,res)=>{
         if(newUser){
             await newUser.save();
             generateTokenAndSetCookies(newUser._id,res);
-            res.status(201).json({message:'User registered successfully',user:{id:newUser._id,username:newUser.username,email:newUser.email}}); 
+            res.status(201).json({message:'User registered successfully',user:{id:newUser._id,username:newUser.username,email:newUser.email},token}); 
         }
     } catch (error) {
         res.status(500).json({message:'Internal server error'});
@@ -50,8 +50,8 @@ const login=async(req,res)=>{
         if(!isMatch){
             return res.status(400).json({message:'Invalid credentials'});
         }
-        generateTokenAndSetCookies(user._id,res);
-        res.status(200).json({message:'Login successful',user:{userId:user._id,username:user.username,email:user.email,isActive:true}});
+        const token = generateTokenAndSetCookies(user._id,res);
+        res.status(200).json({message:'Login successful',user:{userId:user._id,username:user.username,email:user.email,isActive:true},token});
     } catch (error) {
         res.status(500).json({message:'Internal server error'});
         console.error('Error in login:', error);

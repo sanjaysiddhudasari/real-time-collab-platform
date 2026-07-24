@@ -23,6 +23,7 @@ export default function Login() {
       const response = await api.post("/auth/login", formData);
       console.log(response.data);
       localStorage.setItem("user",JSON.stringify(response.data.user));
+      if (response.data.token) localStorage.setItem("token", response.data.token);
       navigate("/");
     } catch (err) {
       setError("Invalid username or password. Please try again.");
