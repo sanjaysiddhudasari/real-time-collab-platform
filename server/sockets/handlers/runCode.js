@@ -2,7 +2,8 @@ const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { v4: uuid } = require("uuid");
+
+const crypto = require("crypto");
 
 const LANG_CONFIG = {
   javascript: {
@@ -57,7 +58,7 @@ const runCode = ({ code, lang, roomId, fileId }, io) => {
   // Create temp file
   const filename = path.join(
     os.tmpdir(),
-    `codesync_${uuid()}.${config.ext}`
+    `codesync_${crypto.randomUUID()}.${config.ext}`
   );
 
   fs.writeFileSync(filename, code);
