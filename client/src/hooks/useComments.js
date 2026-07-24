@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { socket } from "../socket/socket";
 
-const API = "http://192.168.29.94:5000/api";
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function useComments({ roomId, fileId }) {
   const [comments, setComments] = useState([]);

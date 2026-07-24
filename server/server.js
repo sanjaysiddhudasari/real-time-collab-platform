@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const initSocket = require("./sockets/socket");
 const cors = require('cors');
+const helmet = require('helmet');
 const runCode = require('./sockets/handlers/runCode')
 
 const { createServer } = require("http");
@@ -22,11 +23,12 @@ const connectDb = require("./db/connection");
 
 const app = express();
 
+app.use(helmet());
 app.use(cookieParser());
 app.use(express.json());
 app.use(
   cors({
-    origin: true,
+    origin: process.env.CLIENT_URL ,
     credentials: true,
   }),
 );
@@ -352,8 +354,17 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Health endpoint for deployment monitoring
+app.get("/api/health", (_req, res) => res.json({ status: "ok", uptime: process.uptime() }));
 
-  connectDb();
+// Centralized error handler
+app.use((err, _req, res, _next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ message: "Internal server error" });
+});
+
+connectDb().then(() => {
+  httpServer.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
 });

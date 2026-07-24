@@ -61,7 +61,7 @@ const login=async(req,res)=>{
 const logout=async(req,res)=>{
     try{
         const userId=req.userId;
-        const user=await User.updateOne({userId:userId},{$set:{isActive:false}});
+        const user=await User.updateOne({_id:userId},{$set:{isActive:false}});
         res.clearCookie('jwt',{httpOnly:true,secure:process.env.NODE_ENV==='production'});
         res.status(200).json({message:'Logout successful'});
     } catch (error) {

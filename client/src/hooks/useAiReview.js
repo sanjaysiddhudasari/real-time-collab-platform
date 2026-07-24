@@ -5,7 +5,7 @@ function useAiReview() {
     const [reviews, setReviews] = useState({});
     const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState(null);
-    const API_URL = 'http://192.168.29.94:5000';
+    const API_URL = import.meta.env.VITE_API_URL?.replace('/api','') || 'http://localhost:5000';
 
     async function postAiComments({ roomId, fileId, suggestions }) {
         for (const item of suggestions) {

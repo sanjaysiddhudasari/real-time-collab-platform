@@ -4,6 +4,6 @@ const protectRoute=require('../middlewares/protectRoute');
 
 const router=express.Router();
 
-router.post('/review',protectRoute, streamController);
+router.post('/review',protectRoute, streamController); 
 
 module.exports=router;
