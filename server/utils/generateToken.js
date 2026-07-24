@@ -8,7 +8,7 @@ const generateTokenAndSetCookies=(userId,res)=>{
         httpOnly:true,
         secure: process.env.NODE_ENV==='production',
         maxAge:7*24*60*60*1000,
-        sameSite: process.env.NODE_ENV==='production' ? 'Strict' : 'Lax'
+        sameSite: process.env.NODE_ENV==='production' ? 'None' : 'Lax'
     });
 }
 
