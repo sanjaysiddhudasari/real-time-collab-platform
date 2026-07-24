@@ -85,9 +85,20 @@ const getCurrentUser=async(req,res)=>{
 }
 
 
+const debugCookie = (req, res) => {
+    res.json({
+        hasCookie: !!req.cookies?.jwt,
+        cookieExists: req.cookies?.jwt?.substring(0, 20) + "...",
+        nodeEnv: process.env.NODE_ENV,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    });
+};
+
 module.exports={
     register,
     login,
     logout,
-    getCurrentUser
+    getCurrentUser,
+    debugCookie,
 }
