@@ -99,6 +99,7 @@ export default function Room() {
           output={output} runningFiles={runningFiles} lastRunFileId={lastRunFileId}
           setShowCreateModal={setShowCreateModal} setRenameTarget={setRenameTarget}
           comments={commentHook.comments}
+          commentsOpen={commentsOpen}
           onGutterClick={(line) => setActiveCommentLine(line)}
           activeCommentLine={activeCommentLine}
         />

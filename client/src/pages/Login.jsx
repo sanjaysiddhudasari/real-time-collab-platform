@@ -1,6 +1,6 @@
 import { useState } from "react";
 import api from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Login() {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -9,6 +9,7 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (field) => (e) => {
     setFormData((p) => ({ ...p, [field]: e.target.value }));
@@ -24,7 +25,7 @@ export default function Login() {
       console.log(response.data);
       localStorage.setItem("user",JSON.stringify(response.data.user));
       if (response.data.token) localStorage.setItem("token", response.data.token);
-      navigate("/");
+      navigate(location.state?.from || "/", { replace: true });
     } catch (err) {
       setError("Invalid username or password. Please try again.");
       console.error("Login error:", err);

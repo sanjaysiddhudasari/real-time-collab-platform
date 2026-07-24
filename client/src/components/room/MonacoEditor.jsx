@@ -12,6 +12,7 @@ function MonacoEditor({
   removeCursorRef,
   lastSyncedRef,
   comments,
+  commentsOpen,
   onGutterClick,
   activeCommentLine,
 }) {
@@ -26,7 +27,7 @@ function MonacoEditor({
     if (!editor || !window.monaco) return;
     editor.deltaDecorations(commentDecorations.current, []);
     commentDecorations.current = [];
-    if (!comments?.length) return;
+    if (!commentsOpen || !comments?.length) return;
     const decos = [];
     const seen = new Set();
     comments.forEach((c) => {
@@ -41,7 +42,7 @@ function MonacoEditor({
       });
     });
     commentDecorations.current = editor.deltaDecorations([], decos);
-  }, [comments, editorRef]);
+  }, [comments, commentsOpen, editorRef]);
 
   // ── Highlight active comment line ─────────────────────────
   useEffect(() => {
