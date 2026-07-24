@@ -51,7 +51,7 @@ const login=async(req,res)=>{
             return res.status(400).json({message:'Invalid credentials'});
         }
         generateTokenAndSetCookies(user._id,res);
-        res.status(200).json({message:'Login successful',user:{id:user._id,username:user.username,email:user.email,isActive:true}});
+        res.status(200).json({message:'Login successful',user:{userId:user._id,username:user.username,email:user.email,isActive:true}});
     } catch (error) {
         res.status(500).json({message:'Internal server error'});
         console.error('Error in login:', error);
@@ -61,7 +61,7 @@ const login=async(req,res)=>{
 const logout=async(req,res)=>{
     try{
         const userId=req.userId;
-        const user=await User.updateOne({userId:userId},{$set:{isActive:false}});
+        const user=await User.updateOne({_id:userId},{$set:{isActive:false}});
         res.clearCookie('jwt',{httpOnly:true,secure:process.env.NODE_ENV==='production'});
         res.status(200).json({message:'Logout successful'});
     } catch (error) {

@@ -29,7 +29,7 @@ function Navbar({ connected,user }) {
 
           {/* Avatar */}
           <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-600 to-violet-600 flex items-center justify-center text-xs font-semibold cursor-pointer">
-            {user.username.slice(0,2).toUpperCase()}
+            {user?.username?.slice(0,2).toUpperCase()}
           </div>
 
           <button

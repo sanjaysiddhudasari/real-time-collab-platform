@@ -78,6 +78,7 @@ export default function Login() {
           {/* Social buttons */}
           <div className="flex gap-2.5 mb-6">
             <button
+              onClick={()=>window.location.href=`http://${window.location.hostname}:5000/api/auth/google`}
               type="button"
               className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 text-sm font-medium transition duration-200 hover:bg-zinc-800 hover:border-zinc-700 hover:text-white cursor-pointer"
             >

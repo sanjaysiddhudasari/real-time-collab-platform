@@ -1,4 +1,3 @@
-import React from "react";
 import { Icon } from "../common/Icon";
 import { LANGS, avatarColor, ICONS } from "./dashboard.constants";
 import { formatDistanceToNow } from "date-fns";
@@ -6,7 +5,11 @@ import { formatDistanceToNow } from "date-fns";
 function RoomCard({ rooms, userId, onJoin, onDelete, joining, tab, search }) {
   const filtered = rooms
     ?.filter((r) =>
-      tab === "mine" ? r.owner.toString() === userId.toString() : true,
+      tab === "mine"
+        ? r.participants?.some(
+            (p) => (p._id?.toString() || p.toString()) === userId.toString(),
+          )
+        : true,
     )
     ?.filter((r) => r.roomname.toLowerCase().includes(search.toLowerCase()));
   return (
@@ -20,7 +23,7 @@ function RoomCard({ rooms, userId, onJoin, onDelete, joining, tab, search }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((room) => {
             console.log(room);
-            const lang = LANGS[room.language];
+            const lang = LANGS[room.files[0]?.lang || "javascript"];
             const isJoining = joining === room.roomId;
             return (
               <div
@@ -41,10 +44,16 @@ function RoomCard({ rooms, userId, onJoin, onDelete, joining, tab, search }) {
                           Owner
                         </span>
                       )}
+                      <span className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${room.isPublic ? "text-green-500 border border-green-500/30" : "text-violet-400 border border-violet-500/30"}`}>
+                        {room.isPublic ? "🌍 Public" : "🔒 Private"}
+                      </span>
                     </div>
                     <h3 className="text-sm font-semibold text-white truncate">
                       {room.roomname}
                     </h3>
+                    {!room.isPublic && room.inviteCode && room.owner.toString() === userId.toString() && (
+                      <p className="text-[10px] text-violet-400/60 mt-1">code: {room.inviteCode}</p>
+                    )}
                   </div>
 
                   {room.owner.toString() === userId.toString() && (

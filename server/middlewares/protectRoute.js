@@ -15,8 +15,11 @@ const protectRoute=(req,res,next)=>{
         req.userId=decoded.userId;  // we will set this in the req object so that we can use it in the controllers to get the current user
         next();
     } catch (error) {
-        res.status(500).json({message:'Internal server error'});    
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Unauthorized - invalid or expired token' });
+        }
         console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 }
 
