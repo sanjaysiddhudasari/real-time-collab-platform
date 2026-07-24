@@ -7,13 +7,18 @@ function useAiReview() {
     const [error, setError] = useState(null);
     const API_URL = import.meta.env.VITE_API_URL?.replace('/api','') || 'http://localhost:5000';
 
+    const authHeaders = () => {
+        const token = localStorage.getItem("token");
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
     async function postAiComments({ roomId, fileId, suggestions }) {
         for (const item of suggestions) {
             try {
                 await fetch(`${API_URL}/api/comments`, {
                     method: 'POST',
                     credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
                     body: JSON.stringify({
                         roomId,
                         fileId,
@@ -37,7 +42,7 @@ function useAiReview() {
             const response = await fetch(`${API_URL}/api/ai/review`, {
                 method: 'POST',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
                 body: JSON.stringify({ code, language }),
             });
             const reader = response.body.getReader();
