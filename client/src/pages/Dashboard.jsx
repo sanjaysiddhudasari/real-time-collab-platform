@@ -21,6 +21,8 @@ export default function Dashboard() {
         username: params.get("username"),
       };
       localStorage.setItem("user", JSON.stringify(user));
+      const token = params.get("token");
+      if (token) localStorage.setItem("token", token);
       // Clean URL (remove query params)
       window.history.replaceState({}, "", "/");
     }

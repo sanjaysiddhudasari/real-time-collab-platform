@@ -14,8 +14,8 @@ const initSocket = (httpServer) => {
 
   io.use((socket, next) => {
     const cookies = socket.handshake.headers.cookie;
-    const token = cookies?.split('; ').find(row => row.startsWith('jwt='))?.split('=')[1];
-    console.log("Token from cookies:", token);
+    const cookieToken = cookies?.split('; ').find(row => row.startsWith('jwt='))?.split('=')[1];
+    const token = cookieToken || socket.handshake.auth?.token;
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
         return next(new Error("Authentication error"));

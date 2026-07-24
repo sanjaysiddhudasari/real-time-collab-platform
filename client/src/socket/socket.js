@@ -9,4 +9,5 @@ export const socket = io(SOCKET_URL,{
     reconnection:true,
     reconnectionAttempts:5,
     reconnectionDelay:1000,
+    auth: (cb) => cb({ token: localStorage.getItem("token") }),
 });

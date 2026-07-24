@@ -90,11 +90,11 @@ const googleCallback = async (req, res) => {
     }
 
     // 4. Generate JWT and set cookie
-    generateTokenAndSetCookies(user._id, res);
+    const token = generateTokenAndSetCookies(user._id, res);
 
     // 5. Redirect back to frontend with dynamic client URL
     res.redirect(
-      `${clientUrl}/?googleLogin=true&userId=${user._id}&username=${user.username}`
+      `${clientUrl}/?googleLogin=true&userId=${user._id}&username=${user.username}&token=${token}`
     );
   } catch (error) {
     console.error("Google auth error:", error);
