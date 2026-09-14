@@ -1,10 +1,30 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../services/api";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) return;
+
+    setSending(true);
+    setError("");
+    try {
+      await api.post("/auth/forgot-password", { email: trimmedEmail });
+      setSent(true);
+    } catch {
+      setError("Unable to send a reset link. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#09090b] flex items-center justify-center px-4">
@@ -31,10 +51,7 @@ export default function ForgotPassword() {
             </button>
           ) : (
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (email.trim()) setSent(true);
-              }}
+              onSubmit={handleSubmit}
               className="space-y-3"
             >
               <input
@@ -45,11 +62,13 @@ export default function ForgotPassword() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="field w-full bg-black/30 border border-white/[0.07] rounded-md px-3 py-2 text-[13px] text-zinc-100 placeholder-zinc-600 outline-none"
               />
+              {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
               <button
                 type="submit"
-                className="btn-press w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-[13px] font-semibold rounded-md transition-colors cursor-pointer"
+                disabled={sending}
+                className="btn-press w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-[13px] font-semibold rounded-md transition-colors cursor-pointer"
               >
-                Send reset link
+                {sending ? "Sending…" : "Send reset link"}
               </button>
               <button
                 type="button"

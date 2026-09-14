@@ -32,6 +32,19 @@ function RoomNav({ lang, setChatOpen, chatOpen, setAiOpen, aiOpen, setCommentsOp
       </div>
 
       {/* Center — language */}
+      <label className="md:hidden shrink-0">
+        <span className="sr-only">Programming language</span>
+        <select
+          value={lang || ""}
+          onChange={(e) => handleLangChange(e.target.value)}
+          aria-label="Programming language"
+          className="max-w-20 rounded-md border border-white/[0.06] bg-white/[0.04] px-1.5 py-1 text-[11px] font-medium font-mono text-zinc-300 outline-none"
+        >
+          {LANGUAGES.map((l) => (
+            <option key={l} value={l}>{LANG_SHORT[l] || l}</option>
+          ))}
+        </select>
+      </label>
       <div className="hidden md:flex items-center gap-px bg-white/[0.04] border border-white/[0.06] rounded-md p-0.5">
         {LANGUAGES.map((l) => (
           <button
