@@ -37,7 +37,7 @@ code, pre, .font-mono {
 .panel-slide-right { animation: slide-in-right 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .msg-in { animation: msg-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
 @media (prefers-reduced-motion: reduce) {
-  .animate-enter, .modal-pop, .backdrop-fade, .panel-slide-up, .panel-slide-right, .msg-in { animation: none; }
+  .animate-enter, .modal-pop, .backdrop-fade, .panel-slide-up, .panel-slide-right, .msg-in, .live-dot::after { animation: none; }
 }
 .live-dot { position: relative; }
 .live-dot::after {
