@@ -7,24 +7,20 @@ const register=async(req,res)=>{
         if(!username || !email || !password){
             return res.status(400).json({message:'All fields are required'});
         }
-        //email regex validation
         const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if(!emailRegex.test(email)){
             return res.status(400).json({message:'Invalid email format'});
         }
-
         const existingUser=await User.findOne({username});
         if(existingUser){
             return res.status(400).json({message:'User already exists'});
         }
-
         if(password.length<6){
             return res.status(400).json({message:'Password must be at least 6 characters long'});
         }
         const salt=await bcrypt.genSalt(10);
         const hashedPassword=await bcrypt.hash(password,salt);
-
-        const newUser=new User({username,email,password:hashedPassword,isActive:false}); 
+        const newUser=new User({username,email,password:hashedPassword,isActive:false});
         if(newUser){
             await newUser.save();
             generateTokenAndSetCookies(newUser._id,res);
@@ -56,13 +52,20 @@ const login=async(req,res)=>{
         res.status(500).json({message:'Internal server error'});
         console.error('Error in login:', error);
     }
-};  
+};
 
 const logout=async(req,res)=>{
     try{
         const userId=req.userId;
-        const user=await User.updateOne({_id:userId},{$set:{isActive:false}});
-        res.clearCookie('jwt',{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:process.env.NODE_ENV==='production' ? 'None' : 'Lax',path:'/'});
+        await User.updateOne({_id:userId},{$set:{isActive:false}});
+        const isProduction = process.env.NODE_ENV === 'production';
+        res.clearCookie('jwt',{
+            httpOnly:true,
+            secure:isProduction,
+            sameSite:isProduction ? 'None' : 'Lax',
+            path:'/',
+            ...(isProduction ? { partitioned:true } : {}),
+        });
         res.status(200).json({message:'Logout successful'});
     } catch (error) {
         res.status(500).json({message:'Internal server error'});
@@ -72,7 +75,7 @@ const logout=async(req,res)=>{
 
 const getCurrentUser=async(req,res)=>{
     try{
-        const userId=req.userId;  // we will set this in the auth middleware why because we will verify the token and extract the userId from it and set it in the req object
+        const userId=req.userId;
         const user=await User.findById(userId).select('-password');
         if(!user){
             return res.status(404).json({message:'User not found'});
@@ -83,7 +86,6 @@ const getCurrentUser=async(req,res)=>{
         console.error('Error in getCurrentUser:', error);
     }
 }
-
 
 const debugCookie = (req, res) => {
     res.json({
