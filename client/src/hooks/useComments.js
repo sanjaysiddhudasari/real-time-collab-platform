@@ -3,10 +3,7 @@ import { socket } from "../socket/socket";
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const authHeaders = () => {
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// ponytail: cookie-only; fetch uses credentials:include so the jwt cookie goes automatically
 
 export default function useComments({ roomId, fileId }) {
   const [comments, setComments] = useState([]);
@@ -18,7 +15,6 @@ export default function useComments({ roomId, fileId }) {
     try {
       const res = await fetch(`${API}/comments/${roomId}/${fileId}`, {
         credentials: "include",
-        headers: { ...authHeaders() },
       });
       const data = await res.json();
       setComments(data);
@@ -39,7 +35,7 @@ export default function useComments({ roomId, fileId }) {
     await fetch(`${API}/comments/${id}/reply`, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ explanation }),
     });
     socket.emit("comment-updated");
@@ -50,7 +46,6 @@ export default function useComments({ roomId, fileId }) {
     await fetch(`${API}/comments/${id}/resolve`, {
       method: "PATCH",
       credentials: "include",
-      headers: { ...authHeaders() },
     });
     socket.emit("comment-updated");
     refresh();
@@ -60,7 +55,6 @@ export default function useComments({ roomId, fileId }) {
     await fetch(`${API}/comments/${id}/unresolve`, {
       method: "PATCH",
       credentials: "include",
-      headers: { ...authHeaders() },
     });
     socket.emit("comment-updated");
     refresh();
@@ -71,7 +65,7 @@ export default function useComments({ roomId, fileId }) {
     const res = await fetch(`${API}/comments`, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roomId, fileId, line, type, explanation, suggestion, isAI }),
     });
     if (!res.ok) throw new Error("Failed to create comment");

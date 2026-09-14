@@ -27,8 +27,8 @@ const register=async(req,res)=>{
         const newUser=new User({username,email,password:hashedPassword,isActive:false}); 
         if(newUser){
             await newUser.save();
-            const token=generateTokenAndSetCookies(newUser._id,res);
-            res.status(201).json({message:'User registered successfully',user:{id:newUser._id,username:newUser.username,email:newUser.email},token});
+            generateTokenAndSetCookies(newUser._id,res);
+            res.status(201).json({message:'User registered successfully',user:{id:newUser._id,username:newUser.username,email:newUser.email}});
         }
     } catch (error) {
         res.status(500).json({message:'Internal server error'});
@@ -50,8 +50,8 @@ const login=async(req,res)=>{
         if(!isMatch){
             return res.status(400).json({message:'Invalid credentials'});
         }
-        const token = generateTokenAndSetCookies(user._id,res);
-        res.status(200).json({message:'Login successful',user:{userId:user._id,username:user.username,email:user.email,isActive:true},token});
+        generateTokenAndSetCookies(user._id,res);
+        res.status(200).json({message:'Login successful',user:{userId:user._id,username:user.username,email:user.email,isActive:true}});
     } catch (error) {
         res.status(500).json({message:'Internal server error'});
         console.error('Error in login:', error);
@@ -62,7 +62,7 @@ const logout=async(req,res)=>{
     try{
         const userId=req.userId;
         const user=await User.updateOne({_id:userId},{$set:{isActive:false}});
-        res.clearCookie('jwt',{httpOnly:true,secure:process.env.NODE_ENV==='production'});
+        res.clearCookie('jwt',{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:process.env.NODE_ENV==='production' ? 'None' : 'Lax',path:'/'});
         res.status(200).json({message:'Logout successful'});
     } catch (error) {
         res.status(500).json({message:'Internal server error'});

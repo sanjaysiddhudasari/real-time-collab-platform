@@ -332,10 +332,6 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("file-deleted", { fileId });
   })
 
-  socket.on("cursor-update", (data) => {
-    socket.to(data.roomId).emit("cursor-update", data);
-});
-
   socket.on("disconnect", async () => {
     console.log("User disconnected:", socket.id);
     const uid = socket.userId?.toString();

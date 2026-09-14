@@ -3,11 +3,11 @@ import {io} from 'socket.io-client'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const SOCKET_URL = API_URL.replace('/api', '');
 
+// ponytail: cookie-only auth; withCredentials sends the jwt cookie on handshake automatically
 export const socket = io(SOCKET_URL,{
     withCredentials:true,
     autoConnect:false,
     reconnection:true,
     reconnectionAttempts:5,
     reconnectionDelay:1000,
-    auth: (cb) => cb({ token: localStorage.getItem("token") }),
 });

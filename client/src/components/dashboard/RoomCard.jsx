@@ -6,124 +6,111 @@ function RoomCard({ rooms, userId, onJoin, onDelete, joining, tab, search }) {
   const filtered = rooms
     ?.filter((r) =>
       tab === "mine"
-        ? r.participants?.some(
-            (p) => (p._id?.toString() || p.toString()) === userId.toString(),
-          )
+        ? r.owner?.toString() === userId.toString() ||
+          r.participants?.some((p) => (p._id?.toString() || p.toString()) === userId.toString())
         : true,
     )
     ?.filter((r) => r.roomname.toLowerCase().includes(search.toLowerCase()));
   return (
     <>
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
-          <Icon d={ICONS.terminal} size={32} className="mb-3" />
-          <p className="text-sm">No rooms found</p>
+        <div className="animate-enter flex flex-col items-center justify-center py-16 border border-dashed border-white/[0.08] rounded-lg">
+          <Icon d={ICONS.terminal} size={20} className="mb-2 text-zinc-700" />
+          <p className="text-xs text-zinc-500">No rooms found</p>
+          <p className="text-[11px] text-zinc-700 mt-0.5">Try a different search or create a room</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((room) => {
-            console.log(room);
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {filtered.map((room, i) => {
             const lang = LANGS[room.files[0]?.lang || "javascript"];
             const isJoining = joining === room.roomId;
+            const isOwner = room.owner.toString() === userId.toString();
             return (
               <div
                 key={room.roomId}
-                className="group bg-zinc-950/60 backdrop-blur border border-zinc-800/60 hover:border-zinc-700 rounded-2xl p-5 transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col gap-4"
+                style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
+                className="animate-enter group surface surface-hover rounded-lg p-4 flex flex-col gap-3.5"
               >
-                {/* Top row */}
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span
-                        className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${lang.color}`}
-                      >
+                    <h3 className="text-[13px] font-semibold text-zinc-100 truncate tracking-tight">
+                      {room.roomname}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className={`text-[10px] font-medium px-1.5 py-px rounded border ${lang.color}`}>
                         {lang.label}
                       </span>
-                      {room.owner.toString() === userId.toString() && (
-                        <span className="text-[11px] text-zinc-500 border border-zinc-800 px-2 py-0.5 rounded-md">
+                      {isOwner && (
+                        <span className="text-[10px] text-zinc-500 border border-white/[0.06] px-1.5 py-px rounded">
                           Owner
                         </span>
                       )}
-                      <span className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${room.isPublic ? "text-green-500 border border-green-500/30" : "text-violet-400 border border-violet-500/30"}`}>
-                        {room.isPublic ? "🌍 Public" : "🔒 Private"}
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                        <span
+                          className={`w-1 h-1 rounded-full ${room.isPublic ? "bg-emerald-500" : "bg-amber-500"}`}
+                        />
+                        {room.isPublic ? "Public" : "Private"}
                       </span>
                     </div>
-                    <h3 className="text-sm font-semibold text-white truncate">
-                      {room.roomname}
-                    </h3>
-                    {!room.isPublic && room.inviteCode && room.owner.toString() === userId.toString() && (
-                      <p className="text-[10px] text-violet-400/60 mt-1">code: {room.inviteCode}</p>
+                    {!room.isPublic && room.inviteCode && isOwner && (
+                      <p className="text-[10px] text-zinc-600 mt-1.5 font-mono">invite · {room.inviteCode}</p>
                     )}
                   </div>
 
-                  {room.owner.toString() === userId.toString() && (
+                  {isOwner && (
                     <button
                       onClick={() => onDelete(room.roomId)}
-                      className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all duration-150 p-1 ml-2"
+                      title="Delete room"
+                      className="btn-press opacity-0 group-hover:opacity-100 focus:opacity-100 text-zinc-600 hover:text-red-400 transition-all duration-150 p-1 cursor-pointer"
                     >
                       <Icon d={ICONS.trash} size={13} />
                     </button>
                   )}
                 </div>
 
-                {/* participants */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-3 border-t border-white/[0.05]">
                   <div className="flex items-center">
-                    <div className="flex -space-x-2">
-                      {room.participants.slice(0, 4).map((u, i) => (
+                    <div className="flex -space-x-1.5">
+                      {room.participants.slice(0, 4).map((u, idx) => (
                         <div
-                          key={i}
-                          className={`w-6 h-6 rounded-full ${avatarColor(u.username)} flex items-center justify-center text-[9px] font-bold border-2 border-[#0a0a0f]`}
+                          key={idx}
+                          title={u.username}
+                          className={`w-5 h-5 rounded-full ${avatarColor(u.username)} flex items-center justify-center text-[8px] font-bold ring-2 ring-[#101013]`}
                         >
                           {u.username.slice(0, 2).toUpperCase()}
                         </div>
                       ))}
                       {room.participants.length > 4 && (
-                        <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[9px] text-zinc-400 border-2 border-[#0a0a0f]">
+                        <div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] text-zinc-400 ring-2 ring-[#101013]">
                           +{room.participants.length - 4}
                         </div>
                       )}
                     </div>
-                    <span className="ml-2 text-zinc-500 text-xs">
-                      {room.participants.length} online
+                    <span className="ml-2 text-zinc-600 text-[11px] tabular-nums">
+                      {room.participants.length} member{room.participants.length === 1 ? "" : "s"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 text-zinc-600 text-[11px]">
-                    <Icon d={ICONS.clock} size={11} />
-                    {formatDistanceToNow(new Date(room.updatedAt), {
-                      addSuffix: true,
-                    })}
-                  </div>
+                  <span className="text-zinc-700 text-[10px] tabular-nums">
+                    {formatDistanceToNow(new Date(room.updatedAt), { addSuffix: true })}
+                  </span>
                 </div>
 
-                {/* Join button */}
                 <button
                   onClick={() => onJoin(room)}
                   disabled={isJoining}
-                  className="w-full py-2.5 bg-zinc-800/80 hover:bg-blue-600 disabled:opacity-60 border border-zinc-700/50 hover:border-blue-500 text-zinc-300 hover:text-white text-xs font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+                  className="btn-press w-full py-1.5 bg-white/[0.06] hover:bg-blue-600 disabled:opacity-60 border border-white/[0.06] hover:border-blue-500 text-zinc-200 hover:text-white text-xs font-medium rounded-md transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {isJoining ? (
                     <>
-                      <svg
-                        className="animate-spin"
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <path
-                          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
-                          strokeLinecap="round"
-                        />
+                      <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
                       </svg>
-                      Joining…
+                      Joining
                     </>
                   ) : (
                     <>
-                      <Icon d={ICONS.terminal} size={13} />
                       Join session
+                      <span aria-hidden className="text-zinc-500 group-hover:text-white/70 transition-colors">→</span>
                     </>
                   )}
                 </button>

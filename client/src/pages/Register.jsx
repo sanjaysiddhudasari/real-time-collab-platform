@@ -51,27 +51,15 @@ export default function Register() {
     "w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-600 outline-none transition duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 hover:border-zinc-700";
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#09090b] flex items-center justify-center px-4 relative overflow-hidden">
 
-      {/* Background glow orbs */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-16 -left-16 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-violet-500/10 blur-3xl" />
-        <div className="absolute top-1/2 left-2/3 w-48 h-48 rounded-full bg-green-500/5 blur-2xl" />
-      </div>
-
-      {/* Grid overlay */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "radial-gradient(600px 200px at 50% -60px, rgba(59,130,246,0.07), transparent)" }}
       />
 
-      <div className="w-full max-w-md relative z-10 animate-[fadeUp_0.5s_cubic-bezier(0.16,1,0.3,1)_both]">
-        <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <div className="w-full max-w-md relative z-10 animate-enter">
 
         {/* Card */}
         <div className="bg-zinc-950/80 backdrop-blur-2xl border border-zinc-800/60 rounded-2xl p-8 shadow-[0_24px_80px_rgba(0,0,0,0.6)]">
@@ -79,12 +67,12 @@ export default function Register() {
           {/* Header */}
           <div className="mb-7">
             <div className="flex items-center gap-2.5 mb-5">
-              <div className="w-9 h-9 rounded-[10px] bg-linear-to-br from-blue-600 to-violet-600 flex items-center justify-center shrink-0">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <span className="text-zinc-500 text-xs font-medium tracking-widest uppercase">Realtime Platform</span>
+              <span className="text-zinc-500 text-xs font-medium tracking-widest uppercase">CodeSync</span>
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight mb-1.5">Create your account</h1>
             <p className="text-zinc-500 text-sm leading-relaxed">Join thousands of teams collaborating in real time</p>
@@ -278,14 +266,6 @@ export default function Register() {
             </span>
           </p>
         </div>
-
-        {/* SSL badge */}
-        <p className="flex items-center justify-center gap-1.5 mt-4 text-xs text-zinc-700">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          Secured with 256-bit SSL encryption
-        </p>
       </div>
     </div>
   );

@@ -7,10 +7,7 @@ function useAiReview() {
     const [error, setError] = useState(null);
     const API_URL = import.meta.env.VITE_API_URL?.replace('/api','') || 'http://localhost:5000';
 
-    const authHeaders = () => {
-        const token = localStorage.getItem("token");
-        return token ? { Authorization: `Bearer ${token}` } : {};
-    };
+    // ponytail: cookie-only; credentials:include sends the jwt cookie automatically
 
     async function postAiComments({ roomId, fileId, suggestions }) {
         for (const item of suggestions) {
@@ -18,7 +15,7 @@ function useAiReview() {
                 await fetch(`${API_URL}/api/comments`, {
                     method: 'POST',
                     credentials: 'include',
-                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         roomId,
                         fileId,
@@ -42,7 +39,7 @@ function useAiReview() {
             const response = await fetch(`${API_URL}/api/ai/review`, {
                 method: 'POST',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code, language }),
             });
             const reader = response.body.getReader();

@@ -1,120 +1,66 @@
 import { avatarColor } from "./room.constants";
 import { formatDistanceToNow } from "date-fns";
 
-function ChatSideBar({
-  users,
-  messages,
-  input,
-  setInput,
-  handleSend,
-  chatEndRef,
-  onTyping,
-}) {
+function ChatSideBar({ users, messages, input, setInput, handleSend, chatEndRef, onTyping }) {
+  const online = users.filter((u) => u?.active !== false).length;
   return (
-    <div className="w-72 bg-zinc-950 border-l border-zinc-800/70 flex flex-col shrink-0">
-      {/* Chat header */}
-      <div className="h-9 border-b border-zinc-800/50 flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-2">
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#60a5fa"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span className="text-zinc-300 text-xs font-medium">Room chat</span>
-        </div>
-        <span className="text-zinc-600 text-[10px]">
-          {messages.length} messages
+    <div className="panel-slide-right w-72 bg-[#0e1114] border-l border-white/[0.06] flex flex-col shrink-0">
+      <div className="h-9 border-b border-white/[0.05] flex items-center justify-between px-3 shrink-0">
+        <span className="text-zinc-400 text-[11px] font-semibold tracking-wide">Chat</span>
+        <span className="text-zinc-600 text-[10px] tabular-nums">
+          {online} online · {messages.length} msgs
         </span>
       </div>
 
-      {/* Users in room */}
-      <div className="border-b border-zinc-800/50 px-4 py-2.5 shrink-0">
-        <p className="text-zinc-600 text-[10px] font-medium uppercase tracking-widest mb-2">
-          In this room
-        </p>
-        <div className="flex flex-col gap-1.5">
+      <div className="border-b border-white/[0.05] px-3 py-2 shrink-0 max-h-28 overflow-y-auto">
+        <div className="flex flex-col gap-1">
           {users.map((u) => (
-            <div key={u?._id} className="flex items-center gap-2">
-              <div
-                className={`w-5 h-5 rounded-full ${avatarColor(u?.username?.slice(0, 2).toUpperCase())} flex items-center justify-center text-[8px] font-bold shrink-0`}
-              >
+            <div key={u?._id} className="flex items-center gap-1.5">
+              <div className={`w-[18px] h-[18px] rounded-full ${avatarColor(u?.username?.slice(0, 2).toUpperCase())} flex items-center justify-center text-[7px] font-bold shrink-0`}>
                 {u?.username?.slice(0, 2).toUpperCase()}
               </div>
-              <span className="text-zinc-400 text-xs truncate">
-                {u?.username}
-              </span>
-              {u?.typing && (
-                <span className="text-[10px] text-yellow-400 ml-1 animate-pulse">
-                  typing...
-                </span>
-              )}
-              <span
-                className={`ml-auto w-1.5 h-1.5 rounded-full shrink-0 ${u?.active ? "bg-green-400" : "bg-zinc-700"}`}
-              />
+              <span className="text-zinc-400 text-[11px] truncate leading-none">{u?.username}</span>
+              {u?.typing && <span className="text-[10px] text-zinc-600 italic animate-pulse">typing</span>}
+              <span className={`ml-auto w-1.5 h-1.5 rounded-full shrink-0 ${u?.active ? "bg-emerald-500" : "bg-zinc-700"}`} />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Messages */}
-
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-thin scrollbar-thumb-zinc-800">
+      <div className="flex-1 overflow-y-auto px-1 py-1.5">
+        {messages.length === 0 && (
+          <p className="text-zinc-700 text-[11px] text-center py-6">No messages yet.<br />Say hello to the room.</p>
+        )}
         {messages.map((msg) => (
-          <div
-            key={msg?._id}
-            className={`flex gap-2 ${msg.self ? "flex-row-reverse" : "flex-row"}`}
-          >
-            {!msg.self && (
-              <div
-                className={`w-6 h-6 rounded-full ${avatarColor(msg?.sender?.username?.slice(0, 2).toUpperCase())} flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5`}
-              >
-                {msg?.sender?.username?.slice(0, 2).toUpperCase()}
-              </div>
-            )}
-            <div
-              className={`flex flex-col gap-1 max-w-[85%] ${msg.self ? "items-end" : "items-start"}`}
-            >
-              {!msg.self && (
-                <span className="text-zinc-500 text-[10px] px-1">
-                  {msg?.sender?.username}
+          <div key={msg?._id} className="msg-in flex gap-2 px-2 py-1.5 rounded hover:bg-white/[0.03] transition-colors">
+            <div className={`w-6 h-6 rounded-md ${avatarColor(msg?.sender?.username?.slice(0, 2).toUpperCase())} flex items-center justify-center text-[8px] font-bold shrink-0 mt-0.5`}>
+              {msg?.sender?.username?.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="flex flex-col min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5">
+                <span className={`text-[11px] font-semibold leading-none ${msg.self ? "text-blue-400" : "text-zinc-300"}`}>
+                  {msg.self ? "you" : msg?.sender?.username}
                 </span>
-              )}
-              <div
-                className={`px-3 py-2 rounded-xl text-xs leading-relaxed
-                      ${
-                        msg.self
-                          ? "bg-blue-600 text-white rounded-tr-sm"
-                          : "bg-zinc-800/80 text-zinc-300 border border-zinc-700/50 rounded-tl-sm"
-                      }`}
-              >
-                {msg?.content?.split("\n").map((line, i) => (
-                  <span key={i}>{line}</span>
-                ))}
+                <span className="text-zinc-700 text-[9px] tabular-nums">
+                  {msg?.createdAt ? formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true }) : null}
+                </span>
               </div>
-              <span className="text-zinc-600 text-[9px] px-1">
-                {msg?.createdAt
-                  ? formatDistanceToNow(new Date(msg.createdAt), {
-                      addSuffix: true,
-                    })
-                  : null}
-              </span>
+              <p className="text-zinc-300 text-xs leading-relaxed break-words mt-0.5">
+                {msg?.content?.split("\n").map((line, i) => (
+                  <span key={i}>{line}<br /></span>
+                ))}
+              </p>
             </div>
           </div>
         ))}
         <div ref={chatEndRef} />
       </div>
-      {/* Message input */}
-      <div className="border-t border-zinc-800/50 p-3 shrink-0">
-        <div className="flex items-end gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 focus-within:border-zinc-600 transition-colors">
+
+      <div className="border-t border-white/[0.05] p-2 shrink-0">
+        <div className="flex items-end gap-1.5 bg-white/[0.04] border border-white/[0.06] rounded-md px-2.5 py-1.5 field">
           <textarea
             rows={1}
-            placeholder="Message the room…"
+            placeholder="Message…"
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
@@ -126,30 +72,20 @@ function ChatSideBar({
                 handleSend();
               }
             }}
-            className="flex-1 bg-transparent text-xs text-white placeholder-zinc-600 outline-none resize-none leading-5 max-h-24"
+            className="flex-1 bg-transparent text-xs text-zinc-200 placeholder-zinc-600 outline-none resize-none leading-5 max-h-24"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim()}
-            className="shrink-0 w-6 h-6 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors mb-0.5"
+            title="Send"
+            className="btn-press shrink-0 w-6 h-6 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors cursor-pointer"
           >
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            >
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="19" x2="12" y2="5" />
+              <polyline points="5 12 12 5 19 12" />
             </svg>
           </button>
         </div>
-        <p className="text-zinc-700 text-[10px] mt-1.5 text-center">
-          Enter to send · Shift+Enter for newline
-        </p>
       </div>
     </div>
   );

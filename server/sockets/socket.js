@@ -13,10 +13,23 @@ const initSocket = (httpServer) => {
   });
 
   io.use((socket, next) => {
-    const cookies = socket.handshake.headers.cookie;
-    const cookieToken = cookies?.split('; ').find(row => row.startsWith('jwt='))?.split('=')[1];
-    const token = cookieToken || socket.handshake.auth?.token;
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    // ponytail: cookie-only auth; browser sends it automatically via withCredentials
+    const header = socket.handshake.headers.cookie || "";
+    const cookieToken = header.split(";").reduce((found, part) => {
+      const idx = part.indexOf("=");
+      if (idx < 0) return found;
+      const key = part.slice(0, idx).trim();
+      if (key !== "jwt") return found;
+      try {
+        return decodeURIComponent(part.slice(idx + 1).trim());
+      } catch {
+        return part.slice(idx + 1).trim();
+      }
+    }, null);
+    if (!cookieToken) {
+      return next(new Error("Authentication error"));
+    }
+    jwt.verify(cookieToken, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
         return next(new Error("Authentication error"));
       }

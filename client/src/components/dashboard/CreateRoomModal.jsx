@@ -1,50 +1,50 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { LANGS } from "./dashboard.constants";
 
-function CreateRoomModal({newRoom,setNewRoom,handleCreate,setShowModal}) {
+function CreateRoomModal({ newRoom, setNewRoom, handleCreate, setShowModal }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && setShowModal(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setShowModal]);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+      className="backdrop-fade fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      onMouseDown={(e) => e.target === e.currentTarget && setShowModal(false)}
     >
-      <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-2xl p-6 shadow-[0_24px_80px_rgba(0,0,0,0.8)]">
-        <h3 className="text-base font-semibold text-white mb-1">
-          Create new room
-        </h3>
-        <p className="text-zinc-500 text-xs mb-5">
-          Start a new collaborative coding session
-        </p>
+      <div className="modal-pop w-full max-w-sm surface rounded-xl p-5 shadow-[0_24px_64px_rgba(0,0,0,0.6)]">
+        <h3 className="text-[14px] font-semibold text-zinc-100 tracking-tight">Create room</h3>
+        <p className="text-zinc-500 text-[11px] mt-0.5 mb-4">Start a new collaborative session</p>
 
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-              Room name
-            </label>
+            <label className="block text-[11px] font-medium text-zinc-400 mb-1.5">Room name</label>
             <input
               autoFocus
               type="text"
-              placeholder="e.g. Auth Module"
+              placeholder="auth-module"
               value={newRoom.roomname}
-              onChange={(e) =>
-                setNewRoom((p) => ({ ...p, roomname: e.target.value }))
-              }
+              onChange={(e) => setNewRoom((p) => ({ ...p, roomname: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+              className="field w-full bg-[#15181c] border border-white/[0.06] rounded-md px-3 py-2 text-[13px] text-zinc-100 placeholder-zinc-600 outline-none font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-              Language
-            </label>
-            <div className="grid grid-cols-3 gap-2">
+            <label className="block text-[11px] font-medium text-zinc-400 mb-1.5">Language</label>
+            <div className="grid grid-cols-3 gap-1.5">
               {Object.entries(LANGS).map(([key, val]) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => setNewRoom((p) => ({ ...p, language: key }))}
-                  className={`py-2 rounded-xl text-xs font-medium border transition-all duration-150
-                        ${newRoom.language === key ? val.color + " border-current" : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600"}`}
+                  className={`btn-press py-1.5 rounded-md text-[11px] font-medium border transition-colors duration-150 cursor-pointer ${
+                    newRoom.language === key
+                      ? val.color + " border-current"
+                      : "bg-[#15181c] border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/10"
+                  }`}
                 >
                   {val.label}
                 </button>
@@ -53,63 +53,41 @@ function CreateRoomModal({newRoom,setNewRoom,handleCreate,setShowModal}) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">
-              Visibility
-            </label>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                name="public"
-                onClick={(e) =>
-                  setNewRoom((p) => ({
-                    ...p,
-                    visibility: e.target.name,
-                  }))
-                }
-                className={`py-2.5 rounded-xl text-xs font-semibold border transition-all duration-200
-        ${
-          newRoom.visibility === "public"
-            ? "bg-blue-600 border-blue-500 text-white shadow-[0_4px_20px_rgba(37,99,235,0.35)]"
-            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
-        }`}
-              >
-                🌍 Public
-              </button>
-
-              <button
-                type="button"
-                name="private"
-                onClick={(e) =>
-                  setNewRoom((p) => ({
-                    ...p,
-                    visibility: e.target.name,
-                  }))
-                }
-                className={`py-2.5 rounded-xl text-xs font-semibold border transition-all duration-200
-        ${
-          newRoom.visibility === "private"
-            ? "bg-violet-600 border-violet-500 text-white shadow-[0_4px_20px_rgba(139,92,246,0.35)]"
-            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
-        }`}
-              >
-                🔒 Private
-              </button>
+            <label className="block text-[11px] font-medium text-zinc-400 mb-1.5">Visibility</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { v: "public", label: "Public", dot: "bg-emerald-500", active: "bg-blue-600/15 border-blue-500/40 text-blue-300" },
+                { v: "private", label: "Private", dot: "bg-amber-500", active: "bg-violet-600/15 border-violet-500/40 text-violet-300" },
+              ].map((o) => (
+                <button
+                  key={o.v}
+                  type="button"
+                  onClick={() => setNewRoom((p) => ({ ...p, visibility: o.v }))}
+                  className={`btn-press flex items-center justify-center gap-1.5 py-2 rounded-md text-[11px] font-medium border transition-colors duration-150 cursor-pointer ${
+                    newRoom.visibility === o.v
+                      ? o.active
+                      : "bg-[#15181c] border-white/[0.06] text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${o.dot}`} />
+                  {o.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="flex gap-2.5 mt-6">
+        <div className="flex gap-2 mt-5">
           <button
             onClick={() => setShowModal(false)}
-            className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 text-sm rounded-xl transition"
+            className="btn-press flex-1 py-2 bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.06] text-zinc-400 hover:text-zinc-200 text-xs rounded-md transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={!newRoom.roomname.trim()}
-            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition hover:shadow-[0_6px_20px_rgba(37,99,235,0.4)]"
+            className="btn-press flex-1 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-md transition-colors cursor-pointer"
           >
             Create →
           </button>
