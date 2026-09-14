@@ -21,7 +21,6 @@ export default function Dashboard() {
         username: params.get("username"),
       };
       localStorage.setItem("user", JSON.stringify(user));
-      // Clean URL (remove query params)
       window.history.replaceState({}, "", "/");
     }
   }, []);
@@ -36,15 +35,10 @@ export default function Dashboard() {
   const [joining, setJoining] = useState(null);
   const [tab, setTab] = useState("all"); // all | mine
 
-  //custom hooks
-
   const { user } = useUser();
-
   const [connected, socketId] = useSocketStatus();
-
   const [rooms, loading, userId, error, fetchRooms] = useRooms();
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleJoin = async (room) => {
     setJoining(room.roomId);
     try {
@@ -67,48 +61,31 @@ export default function Dashboard() {
   };
 
   const handleDelete = async (roomId) => {
-    const response = await api.delete(`/rooms/${roomId}`);
+    await api.delete(`/rooms/${roomId}`);
     await fetchRooms();
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-4">
-        <div className="w-11 h-11 border-4 border-zinc-800 border-t-blue-500 rounded-full animate-spin" />
-
-        <p className="text-zinc-500 text-sm animate-pulse">
-          Loading dashboard...
-        </p>
+      <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-zinc-800 border-t-zinc-300 rounded-full animate-spin" />
+        <p className="text-zinc-600 text-xs">Loading workspaces</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-125 h-125 rounded-full bg-blue-500/5 blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 w-100 h-100 rounded-full bg-violet-500/8 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-[#09090b] text-zinc-100">
+      {/* single faint top glow + hairline, not floating blobs */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.025]"
-        style={{
-          backgroundImage:
-            "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
+        className="pointer-events-none fixed inset-0"
+        style={{ background: "radial-gradient(600px 200px at 50% -60px, rgba(59,130,246,0.07), transparent)" }}
       />
-
       <Navbar connected={connected} user={user} />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-8">
-        <Stats
-          rooms={rooms}
-          socketId={socketId}
-          connected={connected}
-          userId={userId}
-        />
-
+      <div className="relative z-10 max-w-6xl mx-auto px-6 py-6">
+        <Stats rooms={rooms} socketId={socketId} connected={connected} userId={userId} />
         <Toolbar
           rooms={rooms}
           search={search}
@@ -118,7 +95,6 @@ export default function Dashboard() {
           onTabChange={setTab}
           onCreate={setShowModal}
         />
-
         <RoomCard
           rooms={rooms}
           userId={userId}

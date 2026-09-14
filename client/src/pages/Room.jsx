@@ -105,14 +105,14 @@ export default function Room() {
 
   if (isloading) {
     return (
-      <div className="h-screen bg-[#0d0d12] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-zinc-700 border-t-blue-500 rounded-full animate-spin" />
+      <div className="h-screen bg-[#09090b] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-zinc-800 border-t-zinc-300 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-[#0d0d12] flex flex-col overflow-hidden font-mono">
+    <div className="h-screen bg-[#09090b] flex flex-col overflow-hidden">
       <RoomNav
         users={users}
         lang={activeFile?.lang}

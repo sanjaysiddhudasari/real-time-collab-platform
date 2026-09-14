@@ -15,7 +15,7 @@ export default function Workspace({
   );
 
   return (
-    <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+    <div className="flex flex-col flex-1 min-w-0 overflow-hidden bg-[#1e1e1e]">
       <FileTab
         files={files}
         activeFileId={activeFileId}
