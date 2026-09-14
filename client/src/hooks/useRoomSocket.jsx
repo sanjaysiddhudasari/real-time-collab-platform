@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { socket } from "../socket/socket";
 import toast from "react-hot-toast";
+import api from "../services/api";
 
 export const useRoomSocket = ({
   roomId,

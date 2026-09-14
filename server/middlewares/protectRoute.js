@@ -3,7 +3,8 @@ const jwt=require('jsonwebtoken');
 
 const protectRoute=(req,res,next)=>{
     try{
-        const token = req.cookies?.jwt || req.headers.authorization?.split(' ')[1];
+        // ponytail: cookie-only; Bearer fallback removed so the token never lives in localStorage
+        const token = req.cookies?.jwt;
         if(!token){
             return res.status(401).json({message:'Unauthorized'});
         }

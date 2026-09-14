@@ -90,12 +90,10 @@ const googleCallback = async (req, res) => {
     }
 
     // 4. Generate JWT and set cookie
-    const token = generateTokenAndSetCookies(user._id, res);
+    generateTokenAndSetCookies(user._id, res);
 
-    // 5. Redirect back to frontend with dynamic client URL
-    res.redirect(
-      `${clientUrl}/?googleLogin=true&userId=${user._id}&username=${user.username}&token=${token}`
-    );
+    // ponytail: no query-param token; cookie set above is the only credential
+    res.redirect(`${clientUrl}/?googleLogin=true&userId=${user._id}&username=${user.username}`);
   } catch (error) {
     console.error("Google auth error:", error);
     const clientUrl = getClientUrl(req);
