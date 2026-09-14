@@ -2,26 +2,56 @@ const DOT = { javascript: "#facc15", typescript: "#60a5fa", python: "#4ade80", c
 
 function FileTab({ files, activeFileId, setActiveFileId, onAddFile, onRenameFile, onDeleteFile }) {
   return (
-    <div className="h-9 bg-[#0e1114] border-b border-white/[0.06] flex items-stretch px-2 gap-px shrink-0 overflow-x-auto">
+    <div
+      role="tablist"
+      aria-label="Open files"
+      className="h-9 bg-[#0e1114] border-b border-white/[0.06] flex items-stretch px-2 gap-px shrink-0 overflow-x-auto"
+    >
       {files?.map((file) => {
         const active = file._id?.toString() === activeFileId?.toString();
         return (
           <div
             key={file._id}
-            onClick={() => setActiveFileId(file._id)}
-            onDoubleClick={() => onRenameFile?.(file._id)}
-            title={`${file.name} — double-click to rename`}
             className={`relative group flex items-center gap-1.5 pl-3 pr-2 text-xs cursor-pointer select-none whitespace-nowrap border-r border-white/[0.04] transition-colors ${
               active ? "bg-[#1e1e1e] text-zinc-200" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]"
             }`}
           >
             {active && <span className="absolute top-0 left-0 right-0 h-px bg-blue-500" />}
-            <span
-              className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ background: DOT[file.lang] || "#52525b" }}
-            />
-            <span className="font-mono text-[11px]">{file.name}</span>
             <button
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveFileId(file._id)}
+              onDoubleClick={() => onRenameFile?.(file._id)}
+              onKeyDown={(e) => {
+                if (e.key === "F2") {
+                  e.preventDefault();
+                  onRenameFile?.(file._id);
+                }
+              }}
+              title={`${file.name} — double-click or press F2 to rename`}
+              className="flex h-full items-center gap-1.5 cursor-pointer"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: DOT[file.lang] || "#52525b" }}
+              />
+              <span className="font-mono text-[11px]">{file.name}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRenameFile?.(file._id); }}
+              className="ml-0.5 w-4 h-4 flex items-center justify-center rounded text-zinc-600 hover:text-zinc-200 hover:bg-white/10 cursor-pointer"
+              title={`Rename ${file.name}`}
+              aria-label={`Rename ${file.name}`}
+            >
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+            <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); onDeleteFile?.(file._id); }}
               className={`ml-0.5 w-4 h-4 flex items-center justify-center rounded text-zinc-600 hover:text-zinc-200 hover:bg-white/10 cursor-pointer ${active ? "" : "opacity-0 group-hover:opacity-100 focus:opacity-100"}`}
               title="Delete file"
