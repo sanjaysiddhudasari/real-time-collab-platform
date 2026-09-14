@@ -6,7 +6,8 @@ function RoomCard({ rooms, userId, onJoin, onDelete, joining, tab, search }) {
   const filtered = rooms
     ?.filter((r) =>
       tab === "mine"
-        ? r.participants?.some((p) => (p._id?.toString() || p.toString()) === userId.toString())
+        ? r.owner?.toString() === userId.toString() ||
+          r.participants?.some((p) => (p._id?.toString() || p.toString()) === userId.toString())
         : true,
     )
     ?.filter((r) => r.roomname.toLowerCase().includes(search.toLowerCase()));
